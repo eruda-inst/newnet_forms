@@ -105,7 +105,6 @@ def verificar_atendimentos_fechados():
         db_provedor.close()
         db_local.close()
 
-
 def verificar_formularios_pendentes_para_lembrete():
     """
     Verifica atendimentos com mais de 24h sem resposta e envia um lembrete.
@@ -118,6 +117,8 @@ def verificar_formularios_pendentes_para_lembrete():
     try:
         # Busca atendimentos no status 'Pendente', criados antes do limite de tempo,
         # e para os quais um lembrete ainda não foi enviado.
+        # Precisamos de um modelo de atendimento aqui, vamos usar um placeholder
+        
         atendimentos_para_lembrar = db_local.query(crud_attendance.attendance_model.Attendance).filter(
             crud_attendance.attendance_model.Attendance.status == 'Pendente',
             crud_attendance.attendance_model.Attendance.lembrete_enviado == False,

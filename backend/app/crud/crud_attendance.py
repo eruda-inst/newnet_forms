@@ -3,6 +3,9 @@ from sqlalchemy.orm import Session
 from app.models import attendance as attendance_model
 from app.schemas import answer as answer_schema
 import datetime
+from sqlalchemy.orm import joinedload
+from app.models import attendance as attendance_model, form as form_model
+from typing import List
 
 # --- Funções para Atendimentos ---
 
@@ -61,3 +64,44 @@ def create_submission(db: Session, submission: answer_schema.SubmissionPayload):
     # o commit salva todas as alterações na transação.
     
     return db_attendance
+
+def get_all_attendances_formatted(db: Session) -> List[dict]:
+    """
+    Busca todos os atendimentos e formata a saída para o frontend.
+    """
+    attendances = db.query(attendance_model.Attendance).options(
+        joinedload(attendance_model.Attendance.answers).joinedload(attendance_model.Answer.question)
+    ).order_by(attendance_model.Attendance.id.desc()).all()
+
+    results = []
+    for att in attendances:
+        responses_list = []
+        satisfaction_score = None
+        
+        for ans in att.answers:
+            # Formata a resposta
+            responses_list.append({
+                "questionId": f"q{ans.question.id}",
+                "answer": ans.answer_value
+            })
+            # Se a pergunta for do tipo NPS, guarda o valor para o campo 'satisfaction'
+            if ans.question.question_type == 'nps':
+                try:
+                    satisfaction_score = int(ans.answer_value)
+                except (ValueError, TypeError):
+                    satisfaction_score = None
+
+        result_dict = {
+            "id": f"ATD{att.external_id}",
+            "client_name": att.client_name,
+            "technician": att.technician,
+            "service_type": att.service_type,
+            "date_opened": att.date_opened,
+            "date_closed": att.date_closed,
+            "status": att.status,
+            "satisfaction": satisfaction_score,
+            "responses": responses_list
+        }
+        results.append(result_dict)
+    
+    return results

@@ -1,18 +1,16 @@
-# Dockerfile
+# Dockerfile (versão corrigida)
 
 # Use uma imagem base oficial do Python
 FROM python:3.10-slim
 
-# Define o diretório de trabalho dentro do contêiner
-WORKDIR /app
+# Define o diretório de trabalho para o nosso código
+WORKDIR /code
 
-# Copia o arquivo de dependências para o contêiner
-COPY requirements.txt requirements.txt
+# Copia o arquivo de dependências para o diretório de trabalho (/code)
+COPY requirements.txt .
 
 # Instala as dependências
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia o restante do código da aplicação para o diretório de trabalho
-COPY ./app /app
-
-# O 'command' no docker-compose.yml irá rodar a aplicação
+# Copia a nossa pasta 'app' local para dentro do diretório de trabalho (/code/app)
+COPY ./app ./app

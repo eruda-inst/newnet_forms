@@ -1,51 +1,22 @@
-# app/schemas/form.py
+# app/schemas/answer.py
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List
 
-# --- Schemas para Opções de Pergunta ---
-class QuestionOptionBase(BaseModel):
-    option_text: str
+# Define a estrutura de uma única resposta
+class AnswerCreate(BaseModel):
+    question_id: int
+    answer_value: str
 
-class QuestionOptionCreate(QuestionOptionBase):
-    pass
+# Define a estrutura do payload que o frontend enviará:
+# uma lista de respostas para um atendimento específico.
+class SubmissionPayload(BaseModel):
+    attendance_id: int
+    answers: List[AnswerCreate]
 
-class QuestionOption(QuestionOptionBase):
+
+# Schema para exibir uma resposta já salva no banco
+class Answer(AnswerCreate):
     id: int
-
-    class Config:
-        orm_mode = True
-
-
-# --- Schemas para Perguntas ---
-class QuestionBase(BaseModel):
-    question_text: str
-    question_type: str
-    display_order: int
-
-class QuestionCreate(QuestionBase):
-    options: Optional[List[QuestionOptionCreate]] = None
-
-# Schema para exibir uma pergunta com suas opções
-class Question(QuestionBase):
-    id: int
-    options: List[QuestionOption] = []
-
-    class Config:
-        orm_mode = True
-
-
-# --- Schemas para o Formulário Principal ---
-class FormBase(BaseModel):
-    title: str
-    description: Optional[str] = None
-
-class FormCreate(FormBase):
-    questions: List[QuestionCreate]
-
-# Schema para exibir um formulário completo com todas as suas perguntas e opções
-class Form(FormBase):
-    id: int
-    questions: List[Question] = []
-
+    
     class Config:
         orm_mode = True

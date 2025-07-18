@@ -1,48 +1,102 @@
-# app/routers/submissions.py
+# app/main.py
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from fastapi import FastAPI
+from contextlib import asynccontextmanager # Importa a ferramenta necessária
+from apscheduler.schedulers.background import BackgroundScheduler
 
-# Importando os novos schemas e CRUDs
-from app.schemas import answer as answer_schema
-from app.crud import crud_attendance
-from app.database import get_db_local # Importante: usar a função que obtém o DB local
+# Importa as funções das tarefas que serão executadas
+from .background_job import verificar_atendimentos_fechados, verificar_formularios_pendentes_para_lembrete
 
-# O nome do nosso router
-router = APIRouter(
-    prefix="/submissions",   # Prefixo para todas as rotas neste arquivo
-    tags=["Submissions"]     # Agrupamento na documentação do Swagger
+# Importa o router para as rotas da API
+from .routers import submissions, frontend_api
+
+# Importando o necessário para a rota de "seed" (se você a estiver usando)
+from .crud import crud_form
+from .schemas import form as form_schema
+from .database import SessionLocal, LocalBase, engine_local
+from .models import user, form, attendance
+
+
+print("Criando tabelas no banco de dados, se necessário...")
+LocalBase.metadata.create_all(bind=engine_local)
+print("Tabelas prontas.")
+
+
+
+# Define o gerenciador de ciclo de vida (lifespan)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # --- CÓDIGO DE STARTUP ---
+    # Tudo o que está aqui dentro, antes do 'yield', roda uma única vez
+    # quando a aplicação é iniciada.
+    print("Iniciando agendador de tarefas...")
+    scheduler = BackgroundScheduler()
+
+    # Adiciona a primeira tarefa: buscar novos atendimentos a cada minuto.
+    scheduler.add_job(verificar_atendimentos_fechados, 'interval', seconds=60)
+
+    # Adiciona a segunda tarefa: enviar lembretes a cada hora.
+    scheduler.add_job(verificar_formularios_pendentes_para_lembrete, 'interval', hours=1)
+
+    scheduler.start()
+    # ------------------------
+
+    yield # A aplicação fica "viva" e rodando a partir deste ponto.
+
+    # --- CÓDIGO DE SHUTDOWN ---
+    # Tudo o que está aqui, depois do 'yield', roda uma única vez
+    # quando a aplicação é desligada (ex: com Ctrl+C).
+    print("Parando o agendador de tarefas...")
+    scheduler.shutdown()
+    # -------------------------
+
+
+# Cria a instância principal do FastAPI, passando a função lifespan
+app = FastAPI(
+    lifespan=lifespan,
+    title="API de Pesquisa de Satisfação - NewNet",
+    description="API para receber e armazenar respostas do formulário de avaliação de atendimento.",
+    version="1.0.0"
 )
 
-@router.post("/", status_code=201)
-def submit_answers(
-    submission_payload: answer_schema.SubmissionPayload,
-    db: Session = Depends(get_db_local)
-):
-    """
-    Recebe e processa a submissão de respostas de um formulário por um cliente.
-    
-    O corpo da requisição deve conter:
-    - `attendance_id`: O ID do atendimento que está sendo respondido.
-    - `answers`: Uma lista de objetos, cada um com `question_id` e `answer_value`.
-    """
-    # Verifica se o atendimento para o qual as respostas estão sendo enviadas realmente existe
-    # e não foi respondido ainda.
-    attendance = crud_attendance.get_attendance(db, attendance_id=submission_payload.attendance_id)
-    
-    if not attendance:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Atendimento com ID {submission_payload.attendance_id} não encontrado."
-        )
-        
-    if attendance.status == 'Respondido':
-        raise HTTPException(
-            status_code=400,
-            detail="Este formulário já foi respondido."
-        )
+# Inclui o router das submissões para que as rotas fiquem ativas
+app.include_router(submissions.router)
+app.include_router(frontend_api.router)
 
-    # Chama a função CRUD para salvar todas as respostas e atualizar o atendimento
-    crud_attendance.create_submission(db=db, submission=submission_payload)
-    
-    return {"message": "Pesquisa respondida com sucesso!"}
+
+@app.get("/", tags=["Root"])
+def read_root():
+    return {"status": "API de Pesquisa de Satisfação no ar!"}
+
+
+# ROTA TEMPORÁRIA PARA CRIAR O PRIMEIRO FORMULÁRIO (pode manter ou remover depois do primeiro uso)
+@app.post("/seed-initial-form/", tags=["Setup"])
+def seed_initial_form():
+    db = SessionLocal()
+    form = crud_form.get_form(db, form_id=1)
+    if form:
+        db.close()
+        return {"message": "O formulário inicial já existe."}
+
+    form_data = form_schema.FormCreate(
+        title="Formulário de Avaliação do Atendimento - Newnet",
+        description="Avalie sua experiência com nosso atendimento.",
+        questions=[
+            form_schema.QuestionCreate(question_text="Como você avaliaria o atendimento que recebeu?", question_type='radio', display_order=1, options=[
+                form_schema.QuestionOptionCreate(option_text='Excelente'), form_schema.QuestionOptionCreate(option_text='Bom'), form_schema.QuestionOptionCreate(option_text='Regular'), form_schema.QuestionOptionCreate(option_text='Ruim'), form_schema.QuestionOptionCreate(option_text='Péssimo'),
+            ]),
+            form_schema.QuestionCreate(question_text="O(a) atendente foi claro(a) e educado(a) durante o atendimento?", question_type='radio', display_order=2, options=[
+                form_schema.QuestionOptionCreate(option_text='Sim'), form_schema.QuestionOptionCreate(option_text='Parcialmente'), form_schema.QuestionOptionCreate(option_text='Não'),
+            ]),
+            form_schema.QuestionCreate(question_text="Seu problema foi resolvido com este atendimento?", question_type='radio', display_order=3, options=[
+                form_schema.QuestionOptionCreate(option_text='Sim, completamente'), form_schema.QuestionOptionCreate(option_text='Parcialmente'), form_schema.QuestionOptionCreate(option_text='Não foi resolvido'),
+            ]),
+            form_schema.QuestionCreate(question_text="Quanto tempo que levou para seu problema ser atendido/resolvido?", question_type='radio', display_order=4, options=[
+                form_schema.QuestionOptionCreate(option_text='Imediatamente'), form_schema.QuestionOptionCreate(option_text='Até 30 minutos'), form_schema.QuestionOptionCreate(option_text='Entre 30 min e 2 horas'), form_schema.QuestionOptionCreate(option_text='Mais de 2 horas'), form_schema.QuestionOptionCreate(option_text='Ainda não foi resolvido'),
+            ]),
+            form_schema.QuestionCreate(question_text="Em uma escala de 0 a 10, qual a probabilidade de você recomendar a Newnet para um amigo ou familiar?", question_type='nps', display_order=5),
+        ]
+    )
+    crud_form.create_form(db, form=form_data)
+    db.close()
+    return {"message": "Formulário inicial criado com sucesso!"}

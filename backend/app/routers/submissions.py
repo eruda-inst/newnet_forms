@@ -2,8 +2,6 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-
-# Importando os novos schemas e CRUDs
 from app.schemas import answer as answer_schema
 from app.crud import crud_attendance
 from app.database import get_db_local # Importante: usar a função que obtém o DB local
