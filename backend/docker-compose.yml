@@ -1,0 +1,37 @@
+# docker-compose.yml
+
+version: '3.8'
+
+services:
+  # Serviço do Banco de Dados PostgreSQL
+  db:
+    image: postgres:14-alpine  # Usando uma imagem oficial e leve do Postgres
+    container_name: pesquisa_postgres_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/ # Volume para persistir os dados
+    environment:
+      # As credenciais para o banco de dados. Serão lidas pela nossa API.
+      - POSTGRES_USER=${DB_LOCAL_USER}
+      - POSTGRES_PASSWORD=${DB_LOCAL_PASSWORD}
+      - POSTGRES_DB=${DB_LOCAL_NAME}
+    ports:
+      - "5432:5432" # Mapeia a porta do contêiner para a sua máquina local
+    restart: unless-stopped
+
+  # Serviço da nossa API FastAPI
+  api:
+    container_name: pesquisa_fastapi_api
+    build: .  # Constrói a imagem a partir do Dockerfile na pasta atual
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./app:/app # Mapeia o código local para dentro do contêiner para o --reload funcionar
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./.env # Passa as variáveis de ambiente do arquivo .env para o contêiner
+    depends_on:
+      - db # Garante que o contêiner do banco de dados inicie antes da API
+    restart: unless-stopped
+
+volumes:
+  postgres_data: # Define o volume nomeado para persistir os dados do Postgres
