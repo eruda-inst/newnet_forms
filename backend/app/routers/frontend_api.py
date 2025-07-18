@@ -9,7 +9,6 @@ from app.schemas import frontend as frontend_schema
 
 # Criamos um novo router com o prefixo /api
 router = APIRouter(
-    prefix="/api",
     tags=["Frontend API"]
 )
 
