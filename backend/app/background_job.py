@@ -1,66 +1,104 @@
 # app/background_job.py
-import datetime
-from sqlalchemy.orm import Session
-from .database import SessionLocal, SessionProvedor
-from .database import ProvedorBase
-from sqlalchemy import Column, Integer, String, DateTime, Enum
-from .models.avaliacao import Avaliacao
-from .api import crud_avaliacao
-from .services import enviar_sms_disparo_pro
 
-class AtendimentoProvedor(ProvedorBase):
-    __tablename__ = 'atendimentos' # NOME REAL DA TABELA NO BANCO DO PROVEDOR
+import datetime
+from sqlalchemy.orm import Session, aliased
+from app.database import SessionLocal, SessionProvedor
+
+# Importando os novos CRUDs e o serviço de SMS
+from app.crud import crud_attendance
+from app.services import enviar_sms_disparo_pro
+
+# Modelos para ler do banco de dados do provedor (MariaDB)
+from .database import ProvedorBase
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey
+
+# --- Definição dos Modelos do Banco do Provedor ---
+
+class ChamadoProvedor(ProvedorBase):
+    __tablename__ = 'su_oss_chamado'
     id = Column(Integer, primary_key=True)
-    nome_cliente = Column(String)
+    id_cliente = Column(Integer, ForeignKey('cliente.id'))
+    id_assunto = Column(Integer, ForeignKey('su_oss_assunto.id'))
     data_fechamento = Column(DateTime)
+    # Assumindo que a coluna de status se chama 'status' e o valor para fechado é 'F'
     status = Column(String)
-    telefone = Column(String)
-    
-    # Isso impede que o SQLAlchemy tente modificar a tabela no outro banco
     __table_args__ = {'extend_existing': True}
 
-    ultimo_check = datetime.datetime.now() - datetime.timedelta(hours=24)
+class ClienteProvedor(ProvedorBase):
+    __tablename__ = 'cliente'
+    id = Column(Integer, primary_key=True)
+    razao = Column(String)
+    telefone_celular = Column(String)
+    __table_args__ = {'extend_existing': True}
+
+class AssuntoProvedor(ProvedorBase):
+    __tablename__ = 'su_oss_assunto'
+    id = Column(Integer, primary_key=True)
+    assunto = Column(String)
+    __table_args__ = {'extend_existing': True}
+
+
+# Variável para guardar a data da última verificação
+ultimo_check = datetime.datetime.now() - datetime.timedelta(minutes=5)
 
 def verificar_atendimentos_fechados():
     """
-    Esta função é executada periodicamente para buscar atendimentos fechados
-    e criar os formulários de pesquisa.
+    Busca atendimentos fechados no banco do provedor, unindo as tabelas
+    necessárias, e cria os registros em nosso banco local.
     """
     global ultimo_check
-    
     db_provedor: Session = SessionProvedor()
     db_local: Session = SessionLocal()
     
     print(f"[{datetime.datetime.now()}] Verificando novos atendimentos fechados desde {ultimo_check}...")
     
+    # !!! CONFIRME O VALOR PARA O STATUS DE FECHADO !!!
+    STATUS_FECHADO = 'F' 
+    
     try:
-        # 1. EXTRAÇÃO: Busca atendimentos fechados no banco do provedor desde a última verificação
-        novos_atendimentos = db_provedor.query(AtendimentoProvedor).filter(
-            AtendimentoProvedor.status == 'FECHADO', # Ajuste o filtro conforme sua regra
-            AtendimentoProvedor.data_fechamento > ultimo_check
-        ).all()
+        # Construindo a consulta com JOIN
+        query = db_provedor.query(
+            ChamadoProvedor.id,
+            ClienteProvedor.razao,
+            ClienteProvedor.telefone_celular,
+            AssuntoProvedor.assunto,
+            ChamadoProvedor.data_fechamento
+        ).join(
+            ClienteProvedor, ChamadoProvedor.id_cliente == ClienteProvedor.id
+        ).join(
+            AssuntoProvedor, ChamadoProvedor.id_assunto == AssuntoProvedor.id
+        ).filter(
+            ChamadoProvedor.status == STATUS_FECHADO,
+            ChamadoProvedor.data_fechamento > ultimo_check
+        )
+
+        novos_atendimentos = query.all()
 
         if not novos_atendimentos:
             print("Nenhum atendimento novo encontrado.")
             return
 
         for atendimento in novos_atendimentos:
-            print(f"Novo atendimento fechado encontrado: ID {atendimento.id}")
+            # Desempacotando os resultados da tupla
+            (chamado_id, cliente_razao, cliente_telefone, assunto_nome, data_fechamento) = atendimento
             
-            # 2. CARGA: Verifica se o formulário já não existe e o cria no banco local
-            # (Você precisará criar essa função no seu arquivo de CRUD)
-            existe = crud_avaliacao.get_avaliacao_by_atendimento_id(db_local, id_atendimento=atendimento.id)
+            # Verifica se já não criamos um registro para este atendimento
+            existe = db_local.query(crud_attendance.attendance_model.Attendance).filter_by(external_id=chamado_id).first()
             if not existe:
-                crud_avaliacao.create_blank_formulario(
-                    db=db_local, 
-                    id_atendimento=atendimento.id,
-                    nome_cliente=atendimento.nome_cliente,
-                    telefone_clinete=atendimento.telefone,
-                    data_criacao=atendimento.data_fechamento
+                print(f"Novo atendimento fechado encontrado: ID Externo {chamado_id}")
+                crud_attendance.create_attendance(
+                    db=db_local,
+                    external_id=chamado_id,
+                    form_id=1,
+                    client_name=cliente_razao,
+                    technician=None, # Não temos essa informação agora
+                    service_type=assunto_nome,
+                    date_opened=None, # Não temos essa informação agora
+                    date_closed=data_fechamento,
+                    telefone_cliente=cliente_telefone
                 )
-                print(f"Formulário para o atendimento {atendimento.id} criado com sucesso.")
+                print(f"Registro de atendimento para {chamado_id} criado com sucesso.")
 
-        # Atualiza o tempo da última verificação para o momento atual
         ultimo_check = datetime.datetime.now()
 
     finally:
@@ -70,41 +108,40 @@ def verificar_atendimentos_fechados():
 
 def verificar_formularios_pendentes_para_lembrete():
     """
-    Verifica formulários com mais de 24h sem resposta e envia um lembrete.
+    Verifica atendimentos com mais de 24h sem resposta e envia um lembrete.
     """
     db_local: Session = SessionLocal()
-    print(f"[{datetime.datetime.now()}] Verificando formulários pendentes para lembrete...")
+    print(f"[{datetime.datetime.now()}] Verificando atendimentos pendentes para lembrete...")
 
-    # Define o limite de tempo (24 horas atrás)
     limite_tempo = datetime.datetime.now() - datetime.timedelta(hours=24)
 
     try:
-        # Busca formulários não respondidos, criados antes do limite de tempo,
+        # Busca atendimentos no status 'Pendente', criados antes do limite de tempo,
         # e para os quais um lembrete ainda não foi enviado.
-        formularios_para_lembrar = db_local.query(Avaliacao).filter(
-            Avaliacao.respondido == False,
-            Avaliacao.lembrete_enviado == False,
-            Avaliacao.data_criacao_formulario <= limite_tempo
+        atendimentos_para_lembrar = db_local.query(crud_attendance.attendance_model.Attendance).filter(
+            crud_attendance.attendance_model.Attendance.status == 'Pendente',
+            crud_attendance.attendance_model.Attendance.lembrete_enviado == False,
+            crud_attendance.attendance_model.Attendance.date_closed <= limite_tempo
         ).all()
 
-        if not formularios_para_lembrar:
-            print("Nenhum formulário pendente para lembrar.")
+        if not atendimentos_para_lembrar:
+            print("Nenhum atendimento pendente para lembrar.")
             return
 
-        for form in formularios_para_lembrar:
-            mensagem = (f"Olá, {form.nome_cliente}. Notamos que você ainda não respondeu "
-                        f"nossa pesquisa de satisfação sobre o atendimento {form.id_atendimento}. "
+        for atendimento in atendimentos_para_lembrar:
+            mensagem = (f"Olá, {atendimento.client_name}. Notamos que você ainda não respondeu "
+                        f"nossa pesquisa de satisfação sobre o atendimento {atendimento.external_id}. "
                         "Sua opinião é muito importante!")
             
             sucesso = enviar_sms_disparo_pro(
-                telefone=form.telefone_cliente,
+                telefone=atendimento.telefone_cliente,
                 mensagem=mensagem
             )
 
-            # Se o SMS foi enviado com sucesso, atualiza o banco para não enviar de novo
             if sucesso:
-                form.lembrete_enviado = True
+                atendimento.lembrete_enviado = True
                 db_local.commit()
+                print(f"Lembrete enviado para o atendimento {atendimento.external_id}")
 
     finally:
         db_local.close()
