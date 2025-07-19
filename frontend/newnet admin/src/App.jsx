@@ -2,23 +2,25 @@ import React, { useState, useEffect, useMemo, useRef, useLayoutEffect } from 're
 
 // ==================================================================================
 // ||                                                                              ||
-// ||                     *** CONFIGURAÇÃO LOCAL *** ||
-// ||                                                                              ||
-// ||   Para rodar a funcionalidade de IA localmente, insira sua chave da API do   ||
-// ||   Google AI Studio aqui.                                                     ||
-// ||   Obtenha sua chave em: https://aistudio.google.com/app/apikey               ||
+// ||                   *** CONFIGURAÇÃO DA APLICAÇÃO *** ||
 // ||                                                                              ||
 // ==================================================================================
-const USER_API_KEY = "AIzaSyC0kKF-j3pny9zmgLgYAoMpQqjQkJeFLz4"; // <-- INSIRA SUA CHAVE DA API AQUI
+
+// 1. CHAVE DA API DO GEMINI (PARA RECURSOS DE IA)
+//    Para rodar a funcionalidade de IA localmente, insira sua chave da API do
+//    Google AI Studio aqui. Obtenha sua chave em: https://aistudio.google.com/app/apikey
+const USER_API_KEY = ""; // <-- INSIRA SUA CHAVE DA API AQUI
+
+// 2. ENDEREÇO DA API DE DADOS
+//    Insira o endereço da sua API aqui.
+//    Se esta variável estiver vazia (""), a aplicação usará os dados simulados (mock).
+//    Se preenchida, tentará buscar os dados do endereço fornecido.
+const API_ENDPOINT = "187.103.0.138:8000"; // <-- INSIRA O ENDEREÇO DA SUA API AQUI
 
 
 // ==================================================================================
 // ||                                                                              ||
 // ||                     CONFIGURAÇÃO DA API SIMULADA (MOCK)                        ||
-// ||                                                                              ||
-// ||   Aqui ficam os dados que simulam a resposta da sua API.                       ||
-// ||   Quando você conectar o backend, só precisará substituir a função            ||
-// ||   `fetchMockData` por uma chamada `fetch` real à sua API.                      ||
 // ||                                                                              ||
 // ==================================================================================
 
@@ -42,21 +44,40 @@ const MOCK_API_DATA = {
   ]
 };
 
+// --- FUNÇÕES DE BUSCA DE DADOS ---
+
 /**
  * Simula uma chamada de API para buscar os dados dos formulários.
  * @returns {Promise<Object>} Uma promessa que resolve com os dados da API.
  */
 const fetchMockData = () => {
-  console.log("Buscando dados da API simulada...");
+  console.log("Usando dados simulados (mock)...");
   return new Promise(resolve => {
     setTimeout(() => {
-      console.log("Dados recebidos.");
-      resolve(JSON.parse(JSON.stringify(MOCK_API_DATA))); // Retorna uma cópia profunda para evitar mutação do mock
+      console.log("Dados simulados recebidos.");
+      resolve(JSON.parse(JSON.stringify(MOCK_API_DATA))); // Retorna uma cópia profunda
     }, 800);
   });
 };
 
-// --- Hook de Animação ---
+/**
+ * Busca dados de uma API real.
+ * @param {string} endpoint - O URL da API.
+ * @returns {Promise<Object>} Uma promessa que resolve com os dados da API.
+ */
+const fetchRealData = async (endpoint) => {
+    console.log(`Buscando dados da API real em: ${endpoint}`);
+    const response = await fetch(endpoint);
+    if (!response.ok) {
+        throw new Error(`Erro na API! Status: ${response.status}`);
+    }
+    const data = await response.json();
+    console.log("Dados recebidos da API real.");
+    return data;
+};
+
+
+// --- HOOK DE ANIMAÇÃO ---
 const useAnimatedData = (data, keyField = 'name', duration = 500) => {
     const [animatedData, setAnimatedData] = useState(data);
     const frameRef = useRef();
@@ -102,7 +123,7 @@ const useAnimatedData = (data, keyField = 'name', duration = 500) => {
 };
 
 
-// --- Ícones em SVG ---
+// --- ÍCONES EM SVG ---
 const HomeIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg> );
 const FileTextIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><line x1="10" y1="9" x2="8" y2="9" /></svg> );
 const BarChartIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="12" x2="12" y1="20" y2="10" /><line x1="18" x2="18" y1="20" y2="4" /><line x1="6" x2="6" y1="20" y2="16" /></svg> );
@@ -117,7 +138,7 @@ const XIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" he
 const DownloadIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> );
 
 
-// --- Componentes da UI ---
+// --- COMPONENTES DA UI ---
 
 const StatCard = ({ title, value, icon, subtext }) => ( <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300 border border-gray-100"><div className="flex items-center justify-between"><h3 className="text-sm font-medium text-gray-500">{title}</h3><div className="text-emerald-500">{icon}</div></div><div className="mt-4"><p className="text-3xl font-bold text-gray-800">{value}</p>{subtext && <p className="text-xs text-gray-500 mt-1">{subtext}</p>}</div></div> );
 const StatusBadge = ({ status }) => { const styles = { 'Respondido': 'bg-green-100 text-green-800', 'Pendente': 'bg-yellow-100 text-yellow-800', 'Recorrente': 'bg-orange-100 text-orange-800', 'Não Respondido': 'bg-red-100 text-red-800', }; return <span className={`px-2 py-1 text-xs font-medium rounded-full ${styles[status] || 'bg-gray-100 text-gray-800'}`}>{status}</span>; };
@@ -142,7 +163,7 @@ const Sidebar = ({ activePage, setActivePage }) => (
 
 const NavItem = ({ icon, label, active, onClick }) => ( <button onClick={onClick} className={`w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 ${ active ? 'bg-emerald-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100' }`}><div className="mr-3">{icon}</div><span>{label}</span></button> );
 
-// --- Componentes de Gráfico ---
+// --- COMPONENTES DE GRÁFICO ---
 
 const SimpleBarChart = ({ data, colors, onBarClick }) => {
     const animatedData = useAnimatedData(data, 'name');
@@ -248,7 +269,7 @@ const SimpleLineChart = ({ data, color }) => {
 };
 
 
-// --- Páginas da Aplicação ---
+// --- PÁGINAS DA APLICAÇÃO ---
 
 const MarkdownRenderer = ({ content }) => {
     const htmlContent = useMemo(() => {
@@ -356,7 +377,7 @@ const DashboardAnalysis = ({ filteredForms, questionsData }) => {
                     const text = result.candidates[0].content.parts[0].text;
                     setAnalysisResult(text);
                 } else {
-                    setAnalysisResult("Não foi possível analisar o feedback. Tente novamente.");
+                    setAnalysisResult("Não foi possível analisar o feedback. Verifique sua chave de API e tente novamente.");
                 }
             } catch (error) {
                 console.error("Error calling Gemini API:", error);
@@ -838,7 +859,7 @@ const AnalyticsAnalysis = ({ formsData, questionsData }) => {
                     const text = result.candidates[0].content.parts[0].text;
                     setAnalysisResult(text);
                 } else {
-                    setAnalysisResult("Não foi possível analisar o feedback. Tente novamente.");
+                    setAnalysisResult("Não foi possível analisar o feedback. Verifique sua chave de API e tente novamente.");
                 }
             } catch (error) {
                 console.error("Error calling Gemini API:", error);
@@ -1050,11 +1071,12 @@ const DraggableQuestion = ({ question, index, draggedIdx, prevBoundingBox, onDra
 };
 
 
-// --- Componente Principal da Aplicação ---
+// --- COMPONENTE PRINCIPAL DA APLICAÇÃO ---
 export default function App() {
   const [activePage, setActivePage] = useState('dashboard');
   const [appData, setAppData] = useState({ forms: [], questions: [] });
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [pageFilters, setPageFilters] = useState({
       time: 'all',
       technician: 'all',
@@ -1063,13 +1085,20 @@ export default function App() {
   });
 
   useEffect(() => {
-    setIsLoading(true);
-    fetchMockData()
-      .then(data => {
-        setAppData(data);
-        setIsLoading(false);
-      })
-      .catch(error => { console.error("Erro ao buscar dados:", error); setIsLoading(false); });
+    const loadData = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const data = API_ENDPOINT ? await fetchRealData(API_ENDPOINT) : await fetchMockData();
+            setAppData(data);
+        } catch (err) {
+            console.error("Falha ao carregar dados:", err);
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    loadData();
   }, []);
   
   const handleNavigate = (page, newFilters = {}) => {
@@ -1080,6 +1109,9 @@ export default function App() {
   const renderContent = () => {
     if (isLoading) {
       return <div className="flex items-center justify-center h-full"><p className="text-gray-500">Carregando dados...</p></div>;
+    }
+    if (error) {
+        return <div className="flex items-center justify-center h-full"><p className="text-red-500">Erro ao carregar dados: {error}</p></div>;
     }
     switch (activePage) {
       case 'dashboard': return <DashboardPage formsData={appData.forms} questionsData={appData.questions} onNavigate={handleNavigate} />;
