@@ -12,11 +12,10 @@ import React, { useState, useEffect, useMemo, useRef, useLayoutEffect } from 're
 const USER_API_KEY = ""; // <-- INSIRA SUA CHAVE DA API AQUI
 
 // 2. ENDEREÇO DA API DE DADOS
-//    Insira o endereço da sua API aqui.
+//    Insira o endereço BASE da sua API aqui (ex: http://localhost:8000).
 //    Se esta variável estiver vazia (""), a aplicação usará os dados simulados (mock).
-//    Se preenchida, tentará buscar os dados do endereço fornecido.
-const API_ENDPOINT = "187.103.0.138:8000"; // <-- INSIRA O ENDEREÇO DA SUA API AQUI
-
+//    Se preenchida, tentará buscar os dados de '/api/forms' e '/api/questions' a partir deste endereço.
+const API_ENDPOINT = "http://187.103.0.138:8000"; // <-- INSIRA O ENDEREÇO BASE DA SUA API AQUI
 
 // ==================================================================================
 // ||                                                                              ||
@@ -61,19 +60,47 @@ const fetchMockData = () => {
 };
 
 /**
- * Busca dados de uma API real.
- * @param {string} endpoint - O URL da API.
- * @returns {Promise<Object>} Uma promessa que resolve com os dados da API.
+ * Busca e adapta dados de uma API real.
+ * @param {string} baseUrl - O URL base da API.
+ * @returns {Promise<Object>} Uma promessa que resolve com os dados adaptados.
  */
-const fetchRealData = async (endpoint) => {
-    console.log(`Buscando dados da API real em: ${endpoint}`);
-    const response = await fetch(endpoint);
-    if (!response.ok) {
-        throw new Error(`Erro na API! Status: ${response.status}`);
-    }
-    const data = await response.json();
-    console.log("Dados recebidos da API real.");
-    return data;
+const fetchRealData = async (baseUrl) => {
+    console.log(`Buscando dados da API real em: ${baseUrl}`);
+    
+    // Busca os dados de /api/forms e /api/questions em paralelo
+    const [formsResponse, questionsResponse] = await Promise.all([
+        fetch(`${baseUrl}/api/forms`),
+        fetch(`${baseUrl}/api/questions`)
+    ]);
+
+    if (!formsResponse.ok) throw new Error(`Erro ao buscar /api/forms: ${formsResponse.status}`);
+    if (!questionsResponse.ok) throw new Error(`Erro ao buscar /api/questions: ${questionsResponse.status}`);
+
+    const formsData = await formsResponse.json();
+    const questionsData = await questionsResponse.json();
+
+    // Adapta (mapeia) os dados da API para o formato esperado pela aplicação
+    const mappedForms = formsData.map(form => ({
+        id: form.id,
+        clientName: form.client_name,
+        technician: form.technician,
+        serviceType: form.service_type,
+        dateOpened: form.date_opened,
+        dateClosed: form.date_closed,
+        status: form.status,
+        satisfaction: form.satisfaction,
+        responses: form.responses || [],
+    }));
+
+    const mappedQuestions = questionsData.map(q => ({
+        id: q.id,
+        text: q.question_text,
+        type: q.question_type,
+        options: q.options || [],
+    }));
+
+    console.log("Dados da API real recebidos e adaptados.");
+    return { forms: mappedForms, questions: mappedQuestions };
 };
 
 
