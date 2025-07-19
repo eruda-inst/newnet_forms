@@ -14,8 +14,9 @@ const USER_API_KEY = ""; // <-- INSIRA SUA CHAVE DA API AQUI
 // 2. ENDEREÇO DA API DE DADOS
 //    Insira o endereço BASE da sua API aqui (ex: http://localhost:8000).
 //    Se esta variável estiver vazia (""), a aplicação usará os dados simulados (mock).
-//    Se preenchida, tentará buscar os dados de '/api/forms' e '/api/questions' a partir deste endereço.
-const API_ENDPOINT = "http://187.103.0.138:8000"; // <-- INSIRA O ENDEREÇO BASE DA SUA API AQUI
+//    Se preenchida, tentará buscar os dados de '/forms' e '/questions' a partir deste endereço.
+const API_ENDPOINT = ""; // <-- INSIRA O ENDEREÇO BASE DA SUA API AQUI
+
 
 // ==================================================================================
 // ||                                                                              ||
@@ -67,14 +68,14 @@ const fetchMockData = () => {
 const fetchRealData = async (baseUrl) => {
     console.log(`Buscando dados da API real em: ${baseUrl}`);
     
-    // Busca os dados de /api/forms e /api/questions em paralelo
+    // Busca os dados de /forms e /questions em paralelo
     const [formsResponse, questionsResponse] = await Promise.all([
-        fetch(`${baseUrl}/api/forms`),
-        fetch(`${baseUrl}/api/questions`)
+        fetch(`${baseUrl}/forms`),
+        fetch(`${baseUrl}/questions`)
     ]);
 
-    if (!formsResponse.ok) throw new Error(`Erro ao buscar /api/forms: ${formsResponse.status}`);
-    if (!questionsResponse.ok) throw new Error(`Erro ao buscar /api/questions: ${questionsResponse.status}`);
+    if (!formsResponse.ok) throw new Error(`Erro ao buscar /forms: ${formsResponse.status}`);
+    if (!questionsResponse.ok) throw new Error(`Erro ao buscar /questions: ${questionsResponse.status}`);
 
     const formsData = await formsResponse.json();
     const questionsData = await questionsResponse.json();
