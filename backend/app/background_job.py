@@ -20,6 +20,8 @@ class ChamadoProvedor(ProvedorBase):
     id_cliente = Column(Integer, ForeignKey('cliente.id'))
     id_assunto = Column(Integer, ForeignKey('su_oss_assunto.id'))
     data_fechamento = Column(DateTime)
+    data_abertura = Column(DateTime)
+    id_tecnico = Column(Integer)
     status = Column(String)
     __table_args__ = {'extend_existing': True}
 
@@ -60,7 +62,9 @@ def verificar_atendimentos_fechados():
             ClienteProvedor.razao,
             ClienteProvedor.telefone_celular,
             AssuntoProvedor.assunto,
-            ChamadoProvedor.data_fechamento
+            ChamadoProvedor.data_fechamento,
+            ChamadoProvedor.data_abertura,
+            ChamadoProvedor.id_tecnico
         ).join(
             ClienteProvedor, ChamadoProvedor.id_cliente == ClienteProvedor.id
         ).join(
@@ -89,9 +93,9 @@ def verificar_atendimentos_fechados():
                     external_id=chamado_id,
                     form_id=1,
                     client_name=cliente_razao,
-                    technician=None,
+                    technician=id_tecnico,
                     service_type=assunto_nome,
-                    date_opened=None,
+                    date_opened=data_abertura,
                     date_closed=data_fechamento,
                     telefone_cliente=cliente_telefone
                 )
