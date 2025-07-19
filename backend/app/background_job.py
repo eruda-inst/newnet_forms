@@ -82,7 +82,7 @@ def verificar_atendimentos_fechados():
 
         for atendimento in novos_atendimentos:
             # Desempacotando os resultados da tupla
-            (chamado_id, cliente_razao, cliente_telefone, assunto_nome, data_fechamento) = atendimento
+            (chamado_id, cliente_razao, cliente_telefone, assunto_nome, data_fechamento, data_abertura, id_tecnico) = atendimento
             
             # Verifica se já não criamos um registro para este atendimento
             existe = db_local.query(crud_attendance.attendance_model.Attendance).filter_by(external_id=chamado_id).first()
