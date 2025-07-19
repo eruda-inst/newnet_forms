@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
 # Cria a instância principal do FastAPI, passando a função lifespan
 app = FastAPI(
     lifespan=lifespan,
-    title="API de Pesquisa de Satisfação - NewNet",
+    title="API de Pesquisa de Satisfação - Newnet",
     description="API para receber e armazenar respostas do formulário de avaliação de atendimento.",
     version="1.0.0"
 )
