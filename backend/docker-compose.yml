@@ -9,6 +9,7 @@ services:
     container_name: pesquisa_postgres_db
     volumes:
       - postgres_data:/var/lib/postgresql/data/ # Volume para persistir os dados
+      - /etc/localtime:/etc/localtime:ro
     environment:
       # As credenciais para o banco de dados. Serão lidas pela nossa API.
       - POSTGRES_USER=${DB_LOCAL_USER}
@@ -25,6 +26,7 @@ services:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - ./app:/code/app # <-- ATUALIZE ESTA LINHA para corresponder ao novo workdir
+      - /etc/localtime:/etc/localtime:ro
     ports:
       - "8000:8000"
     env_file:
