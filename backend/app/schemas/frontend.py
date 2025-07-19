@@ -27,8 +27,8 @@ class AttendanceResponse(BaseModel):
     clientName: str = Field(..., alias='client_name')
     technician: Optional[str] = None
     serviceType: str = Field(..., alias='service_type')
-    dateOpened: datetime = Field(None, alias='date_opened')
-    dateClosed: datetime = Field(None, alias='date_closed')
+    dateOpened: Optional[datetime] = Field(None, alias='date_opened')
+    dateClosed: Optional[datetime] = Field(None, alias='date_closed')
     status: str
     satisfaction: Optional[int] = None
     responses: List[AnswerResponse]
