@@ -20,7 +20,6 @@ class ChamadoProvedor(ProvedorBase):
     id_cliente = Column(Integer, ForeignKey('cliente.id'))
     id_assunto = Column(Integer, ForeignKey('su_oss_assunto.id'))
     data_fechamento = Column(DateTime)
-    # Assumindo que a coluna de status se chama 'status' e o valor para fechado é 'F'
     status = Column(String)
     __table_args__ = {'extend_existing': True}
 
@@ -52,7 +51,6 @@ def verificar_atendimentos_fechados():
     
     print(f"[{datetime.datetime.now()}] Verificando novos atendimentos fechados desde {ultimo_check}...")
     
-    # !!! CONFIRME O VALOR PARA O STATUS DE FECHADO !!!
     STATUS_FECHADO = 'F' 
     
     try:
@@ -91,9 +89,9 @@ def verificar_atendimentos_fechados():
                     external_id=chamado_id,
                     form_id=1,
                     client_name=cliente_razao,
-                    technician=None, # Não temos essa informação agora
+                    technician=None,
                     service_type=assunto_nome,
-                    date_opened=None, # Não temos essa informação agora
+                    date_opened=None,
                     date_closed=data_fechamento,
                     telefone_cliente=cliente_telefone
                 )

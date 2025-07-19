@@ -6,7 +6,7 @@ from datetime import datetime
 # --- Schemas para a rota GET /api/questions ---
 
 class QuestionResponse(BaseModel):
-    id: str  # ex: "q1", "q2"
+    id: str 
     text: str = Field(..., alias='question_text')
     type: str = Field(..., alias='question_type')
     options: Optional[List[str]] = None
@@ -19,11 +19,10 @@ class QuestionResponse(BaseModel):
 # --- Schemas para a rota GET /api/forms ---
 
 class AnswerResponse(BaseModel):
-    questionId: str # ex: "q1", "q2"
-    answer: Any # A resposta pode ser número, texto, etc.
+    questionId: str 
+    answer: Any
 
 class AttendanceResponse(BaseModel):
-    # Usamos 'alias' para converter de snake_case (nosso DB) para camelCase (JSON)
     id: str
     clientName: str = Field(..., alias='client_name')
     technician: Optional[str] = None

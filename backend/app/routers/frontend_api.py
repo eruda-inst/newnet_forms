@@ -7,7 +7,6 @@ from app.database import get_db_local
 from app.crud import crud_attendance, crud_form
 from app.schemas import frontend as frontend_schema
 
-# Criamos um novo router com o prefixo /api
 router = APIRouter(
     tags=["Frontend API"]
 )

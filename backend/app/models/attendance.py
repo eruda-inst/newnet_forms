@@ -7,8 +7,8 @@ import datetime
 class Attendance(LocalBase):
     __tablename__ = "attendances"
 
-    id = Column(Integer, primary_key=True, index=True) # Nosso ID interno
-    external_id = Column(Integer, unique=True, index=True, nullable=True) # <-- ADICIONE ESTA LINHA (ID do sistema do provedor)
+    id = Column(Integer, primary_key=True, index=True)
+    external_id = Column(Integer, unique=True, index=True, nullable=True)
     
     form_id = Column(Integer, ForeignKey("forms.id"), nullable=False)
     client_name = Column(String, nullable=False)

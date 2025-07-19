@@ -9,9 +9,7 @@ def enviar_sms_disparo_pro(telefone: str, mensagem: str) -> bool:
     Retorna True se o envio foi bem-sucedido, False caso contrário.
     """
     api_key = os.getenv("DISPAROPRO_API_KEY")
-    # ATENÇÃO: A URL e a estrutura do JSON são exemplos.
-    # Você precisa confirmar os valores corretos na documentação da Disparo PRO.
-    url_api = "https://api.disparopro.com/v1/sms/send" # <-- CONFIRMAR ESTA URL
+    url_api = "https://api.disparopro.com/v1/sms/send"
 
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -21,7 +19,6 @@ def enviar_sms_disparo_pro(telefone: str, mensagem: str) -> bool:
     payload = {
         "to": telefone,
         "message": mensagem
-        # Outros parâmetros que a API possa exigir...
     }
 
     try:

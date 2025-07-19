@@ -17,7 +17,7 @@ def create_attendance(db: Session, external_id: int, form_id: int, client_name: 
     Cria um novo registro de atendimento, usado pela tarefa de fundo.
     """
     db_attendance = attendance_model.Attendance(
-        external_id=external_id, # <-- ADICIONE ESTA LINHA
+        external_id=external_id,
         form_id=form_id,
         client_name=client_name,
         technician=technician,
@@ -25,7 +25,7 @@ def create_attendance(db: Session, external_id: int, form_id: int, client_name: 
         status='Pendente',
         date_opened=date_opened,
         date_closed=date_closed,
-        telefone_cliente=telefone_cliente # Adicionei esta linha também
+        telefone_cliente=telefone_cliente
     )
     db.add(db_attendance)
     db.commit()
@@ -60,8 +60,6 @@ def create_submission(db: Session, submission: answer_schema.SubmissionPayload):
     db_attendance.status = 'Respondido'
     
     db.commit()
-    # Não precisa de refresh em cada resposta individualmente,
-    # o commit salva todas as alterações na transação.
     
     return db_attendance
 

@@ -20,7 +20,6 @@ def create_form(db: Session, form: form_schema.FormCreate):
     db.commit()
     db.refresh(db_form)
 
-    # Agora, cria as perguntas e opções associadas
     for q_in in form.questions:
         db_question = form_model.Question(
             form_id=db_form.id,

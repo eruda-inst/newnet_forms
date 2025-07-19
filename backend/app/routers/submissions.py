@@ -4,12 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.schemas import answer as answer_schema
 from app.crud import crud_attendance
-from app.database import get_db_local # Importante: usar a função que obtém o DB local
+from app.database import get_db_local 
 
-# O nome do nosso router
+
 router = APIRouter(
-    prefix="/submissions",   # Prefixo para todas as rotas neste arquivo
-    tags=["Submissions"]     # Agrupamento na documentação do Swagger
+    prefix="/submissions",  
+    tags=["Submissions"]     
 )
 
 @router.post("/", status_code=201)

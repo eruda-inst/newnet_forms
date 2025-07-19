@@ -1,16 +1,10 @@
 # app/main.py
 
 from fastapi import FastAPI
-from contextlib import asynccontextmanager # Importa a ferramenta necessária
+from contextlib import asynccontextmanager
 from apscheduler.schedulers.background import BackgroundScheduler
-
-# Importa as funções das tarefas que serão executadas
 from .background_job import verificar_atendimentos_fechados, verificar_formularios_pendentes_para_lembrete
-
-# Importa o router para as rotas da API
 from .routers import submissions, frontend_api
-
-# Importando o necessário para a rota de "seed" (se você a estiver usando)
 from .crud import crud_form
 from .schemas import form as form_schema
 from .database import SessionLocal, LocalBase, engine_local
@@ -23,12 +17,10 @@ print("Tabelas prontas.")
 
 
 
-# Define o gerenciador de ciclo de vida (lifespan)
+# Define o gerenciador de ciclo de vida
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # --- CÓDIGO DE STARTUP ---
-    # Tudo o que está aqui dentro, antes do 'yield', roda uma única vez
-    # quando a aplicação é iniciada.
+
     print("Iniciando agendador de tarefas...")
     scheduler = BackgroundScheduler()
 
@@ -39,16 +31,11 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(verificar_formularios_pendentes_para_lembrete, 'interval', hours=1)
 
     scheduler.start()
-    # ------------------------
 
-    yield # A aplicação fica "viva" e rodando a partir deste ponto.
+    yield
 
-    # --- CÓDIGO DE SHUTDOWN ---
-    # Tudo o que está aqui, depois do 'yield', roda uma única vez
-    # quando a aplicação é desligada (ex: com Ctrl+C).
     print("Parando o agendador de tarefas...")
     scheduler.shutdown()
-    # -------------------------
 
 
 # Cria a instância principal do FastAPI, passando a função lifespan
