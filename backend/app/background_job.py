@@ -38,6 +38,11 @@ class AssuntoProvedor(ProvedorBase):
     assunto = Column(String)
     __table_args__ = {'extend_existing': True}
 
+class TecnicoProvedor(ProvedorBase):
+    __tablename__ = 'usuarios'
+    funcionario = Column(Integer, primary_key=True)
+    name = Column(String)
+    __table_args__ = {'extend_existing': True}
 
 # Variável para guardar a data da última verificação
 ultimo_check = datetime.datetime.now() - datetime.timedelta(minutes=5)
@@ -64,16 +69,18 @@ def verificar_atendimentos_fechados():
             AssuntoProvedor.assunto,
             ChamadoProvedor.data_fechamento,
             ChamadoProvedor.data_abertura,
-            ChamadoProvedor.id_tecnico
+            ChamadoProvedor.id_tecnico,
+            TecnicoProvedor.nome,
         ).join(
             ClienteProvedor, ChamadoProvedor.id_cliente == ClienteProvedor.id
         ).join(
             AssuntoProvedor, ChamadoProvedor.id_assunto == AssuntoProvedor.id
+        ).outerjoin(
+            TecnicoProvedor, ChamadoProvedor.id_tecnico == TecnicoProvedor.funcionario
         ).filter(
             ChamadoProvedor.status == STATUS_FECHADO,
             ChamadoProvedor.data_fechamento > ultimo_check
         )
-
         novos_atendimentos = query.all()
 
         if not novos_atendimentos:
@@ -82,7 +89,7 @@ def verificar_atendimentos_fechados():
 
         for atendimento in novos_atendimentos:
             # Desempacotando os resultados da tupla
-            (chamado_id, cliente_razao, cliente_telefone, assunto_nome, data_fechamento, data_abertura, id_tecnico) = atendimento
+            (chamado_id, cliente_razao, cliente_telefone, assunto_nome, data_fechamento, data_abertura, tecnico_nome) = atendimento
             
             # Verifica se já não criamos um registro para este atendimento
             existe = db_local.query(crud_attendance.attendance_model.Attendance).filter_by(external_id=chamado_id).first()
@@ -93,7 +100,7 @@ def verificar_atendimentos_fechados():
                     external_id=chamado_id,
                     form_id=1,
                     client_name=cliente_razao,
-                    technician=id_tecnico,
+                    technician=tecnico_nome,
                     service_type=assunto_nome,
                     date_opened=data_abertura,
                     date_closed=data_fechamento,
