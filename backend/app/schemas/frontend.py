@@ -6,10 +6,12 @@ from datetime import datetime
 # --- Schemas para a rota GET /api/questions ---
 
 class QuestionResponse(BaseModel):
+    db_id: int = Field(..., alias='id')
     id: str 
     text: str = Field(..., alias='question_text')
     type: str = Field(..., alias='question_type')
     options: Optional[List[str]] = None
+    display_order: int
 
     class Config:
         orm_mode = True

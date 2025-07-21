@@ -7,6 +7,7 @@ class QuestionUpdatePayload(BaseModel):
     question_text: str
     question_type: str
     options: List[str] = []
+    display_order: int
 
 class QuestionUpdateResponse(BaseModel):
     id: str

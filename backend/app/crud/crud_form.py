@@ -51,7 +51,8 @@ def get_questions_for_frontend(db: Session, form_id: int = 1) -> List[dict]:
     """
     questions = db.query(form_model.Question).filter(
         form_model.Question.form_id == form_id,
-        form_model.Question.is_active == True).options(
+        form_model.Question.is_active == True
+        ).options(
         joinedload(form_model.Question.options)
     ).order_by(form_model.Question.display_order).all()
 
@@ -61,7 +62,8 @@ def get_questions_for_frontend(db: Session, form_id: int = 1) -> List[dict]:
             "id": f"q{q.id}",
             "question_text": q.question_text,
             "question_type": q.question_type,
-            "options": [opt.option_text for opt in q.options] if q.options else None
+            "options": [opt.option_text for opt in q.options] if q.options else None,
+            "display_order": q.display_order
         }
         question_dict['std_id'] = f'q{q.id}'
         results.append(question_dict)
@@ -113,6 +115,7 @@ def update_question(db: Session, question_id: int, question_in: form_schema.Ques
     # 2. Atualiza os campos da pergunta
     db_question.question_text = question_in.question_text
     db_question.question_type = question_in.question_type
+    db_question.display_order = question_in.display_order
 
     # 3. Atualiza as opções (apagando as antigas e recriando as novas)
     # Isso garante que a lista de opções fique sempre sincronizada.
