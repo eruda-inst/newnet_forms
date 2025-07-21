@@ -37,10 +37,10 @@ const MOCK_API_DATA = {
     { id: 'ATD73614', clientName: 'Carla Dias', technician: 'Ricardo Dias', serviceType: 'Suporte Técnico', dateOpened: '2025-06-20T10:00:00Z', dateClosed: '2025-06-22T11:00:00Z', status: 'Respondido', satisfaction: 7, responses: [{ questionId: 'q1', answer: 7 }, { questionId: 'q2', 'answer': 'Ok.'}, { questionId: 'q3', answer: 'Sim' }] },
   ],
   questions: [
-    { id: 'q1', text: 'Em uma escala de 0 a 10, o quão provável você é de recomendar a Newnet para um amigo ou colega?', type: 'nps' },
-    { id: 'q2', text: 'O que mais influenciou sua nota?', type: 'textarea' },
-    { id: 'q3', text: 'O técnico foi pontual e profissional?', type: 'radio', options: ['Sim', 'Não'] },
-    { id: 'q4', text: 'Se desejar, envie uma foto ou vídeo do problema.', type: 'file' }
+    { id: 'q1', text: 'Em uma escala de 0 a 10, o quão provável você é de recomendar a Newnet para um amigo ou colega?', type: 'nps', display_order: 0 },
+    { id: 'q2', text: 'O que mais influenciou sua nota?', type: 'textarea', display_order: 1 },
+    { id: 'q3', text: 'O técnico foi pontual e profissional?', type: 'radio', options: ['Sim', 'Não'], display_order: 2 },
+    { id: 'q4', text: 'Se desejar, envie uma foto ou vídeo do problema.', type: 'file', display_order: 3 }
   ]
 };
 
@@ -103,19 +103,39 @@ const fetchRealData = async (baseUrl) => {
         responses: form.responses || [],
     }));
 
-    const mappedQuestions = questionsData.map(q => ({
-        id: q.id,
-        text: q.question_text,
-        type: q.question_type,
-        options: q.options || [],
-    }));
+    const mappedQuestions = questionsData
+      .map(q => ({
+          id: q.id,
+          text: q.question_text,
+          type: q.question_type,
+          options: q.options || [],
+          display_order: q.display_order
+      }))
+      .sort((a, b) => a.display_order - b.display_order); // Garante a ordenação inicial
 
     console.log("Dados da API real recebidos e adaptados.");
     return { forms: mappedForms, questions: mappedQuestions };
 };
 
 
-// --- HOOK DE ANIMAÇÃO ---
+// --- HOOKS PERSONALIZADOS ---
+
+// Hook para debounce (atrasar a execução de uma função)
+const useDebounce = (value, delay) => {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedValue(value);
+        }, delay);
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [value, delay]);
+    return debouncedValue;
+};
+
+
+// Hook de Animação
 const useAnimatedData = (data, keyField = 'name', duration = 500) => {
     const [animatedData, setAnimatedData] = useState(data);
     const frameRef = useRef();
@@ -174,6 +194,8 @@ const GripVerticalIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" wi
 const TrashIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg> );
 const XIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> );
 const DownloadIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> );
+const SyncIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin" {...props}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> );
+const CloudCheckIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/><path d="m9 12 2 2 4-4"/></svg> );
 
 
 // --- COMPONENTES DA UI ---
@@ -928,38 +950,119 @@ const AnalyticsAnalysis = ({ formsData, questionsData }) => {
 
 const SettingsPage = ({ initialQuestions }) => {
     const [questions, setQuestions] = useState(initialQuestions || []);
-    const [saveStatus, setSaveStatus] = useState('');
+    const [globalSaveStatus, setGlobalSaveStatus] = useState('idle'); // 'idle', 'saving', 'saved', 'error'
     const [draggedIdx, setDraggedIdx] = useState(null);
+    const debouncedQuestions = useDebounce(questions, 1500);
+    const initialQuestionsRef = useRef(initialQuestions);
+    const isFirstRun = useRef(true);
 
-    const boundingBoxes = useRef({});
-    const containerRef = useRef(null);
+    // Efeito para salvar alterações de CRIAÇÃO e ATUALIZAÇÃO (incluindo reordenação)
+    useEffect(() => {
+        if (isFirstRun.current) {
+            isFirstRun.current = false;
+            return;
+        }
 
-    useLayoutEffect(() => {
-        if (containerRef.current) {
-            Array.from(containerRef.current.children).forEach(child => {
-                const id = child.getAttribute('data-id');
-                if (id) {
-                    boundingBoxes.current[id] = child.getBoundingClientRect();
+        const handleAutoSave = async () => {
+            setGlobalSaveStatus('saving');
+
+            const initialMap = new Map(initialQuestionsRef.current.map(q => [q.id, q]));
+            
+            const promises = debouncedQuestions.map(async (q, index) => {
+                const payload = {
+                    question_text: q.text,
+                    question_type: q.type,
+                    options: q.options || [],
+                    display_order: index
+                };
+
+                if (q.id.startsWith('new_')) {
+                    // CRIAR (POST)
+                    const response = await fetch(`${API_ENDPOINT}/questions`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+                    if (!response.ok) throw new Error('Falha ao criar pergunta');
+                    const newQuestion = await response.json();
+                    // Atualiza o ID temporário pelo ID permanente do backend
+                    setQuestions(currentQs => currentQs.map(oldQ => oldQ.id === q.id ? { ...newQuestion, text: newQuestion.question_text, type: newQuestion.question_type, options: newQuestion.options } : oldQ));
+
+                } else {
+                    // ATUALIZAR (PUT)
+                    const initialQuestion = initialMap.get(q.id);
+                    const hasChanged = !initialQuestion || JSON.stringify({ ...initialQuestion, display_order: index }) !== JSON.stringify(q);
+                    
+                    if (hasChanged) {
+                        const response = await fetch(`${API_ENDPOINT}/questions/${q.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ ...payload, id: q.id }),
+                        });
+                        if (!response.ok) throw new Error('Falha ao atualizar pergunta');
+                    }
                 }
             });
-        }
-    }, [questions]);
 
-    const handleQuestionChange = (index, field, value) => {
-        const updatedQuestions = [...questions];
-        updatedQuestions[index][field] = value;
-        setQuestions(updatedQuestions);
-    };
-    
+            try {
+                await Promise.all(promises);
+                setGlobalSaveStatus('saved');
+                initialQuestionsRef.current = questions; // Atualiza o estado de referência
+            } catch (error) {
+                console.error("Erro no autosave:", error);
+                setGlobalSaveStatus('error');
+            }
+        };
+
+        handleAutoSave();
+
+    }, [debouncedQuestions]);
+
+
+    // Efeito para resetar o status visual após um tempo
+    useEffect(() => {
+        if (globalSaveStatus === 'saved' || globalSaveStatus === 'error') {
+            const timer = setTimeout(() => setGlobalSaveStatus('idle'), 2000);
+            return () => clearTimeout(timer);
+        }
+    }, [globalSaveStatus]);
+
+
     const handleAddQuestion = () => {
         const newQuestion = { id: `new_${crypto.randomUUID()}`, text: 'Nova Pergunta', type: 'textarea', options: [] };
         setQuestions([...questions, newQuestion]);
     };
 
-    const handleRemoveQuestion = (index) => {
-        const updatedQuestions = [...questions];
-        updatedQuestions.splice(index, 1);
-        setQuestions(updatedQuestions);
+    const handleRemoveQuestion = async (questionToRemove) => {
+        // Remove da UI imediatamente para uma experiência mais fluida
+        setQuestions(currentQuestions => currentQuestions.filter(q => q.id !== questionToRemove.id));
+
+        if (questionToRemove.id.startsWith('new_')) {
+            return; // Não precisa fazer chamada à API se a questão nem foi salva ainda
+        }
+
+        setGlobalSaveStatus('saving');
+        try {
+            const response = await fetch(`${API_ENDPOINT}/questions/${questionToRemove.id}`, { method: 'DELETE' });
+            if (!response.ok) throw new Error('Falha ao deletar');
+            console.log(`Questão ${questionToRemove.id} deletada.`);
+            setGlobalSaveStatus('saved');
+            initialQuestionsRef.current = questions.filter(q => q.id !== questionToRemove.id);
+        } catch (error) {
+            console.error("Erro ao deletar pergunta:", error);
+            setGlobalSaveStatus('error');
+            // Opcional: Adicionar a questão de volta à UI e mostrar um erro
+            setQuestions(initialQuestionsRef.current);
+        }
+    };
+    
+    const handleQuestionChange = (index, field, value) => {
+        setQuestions(currentQuestions => {
+            const updatedQuestions = [...currentQuestions];
+            // FIX: Cria um novo objeto para a questão atualizada para garantir a imutabilidade.
+            updatedQuestions[index] = { ...updatedQuestions[index], [field]: value };
+            return updatedQuestions;
+        });
     };
 
     const handleDragStart = (index) => {
@@ -967,7 +1070,7 @@ const SettingsPage = ({ initialQuestions }) => {
     };
 
     const handleDrop = (targetIndex) => {
-        if (draggedIdx === null) return;
+        if (draggedIdx === null || draggedIdx === targetIndex) return;
         
         const newList = [...questions];
         const [draggedItem] = newList.splice(draggedIdx, 1);
@@ -975,74 +1078,6 @@ const SettingsPage = ({ initialQuestions }) => {
         
         setQuestions(newList);
         setDraggedIdx(null);
-    };
-
-    const handleSaveChanges = async () => {
-        setSaveStatus('Salvando...');
-
-        const initialIds = new Set(initialQuestions.map(q => q.id));
-        const currentIds = new Set(questions.map(q => q.id));
-
-        const createdQuestions = questions.filter(q => !initialIds.has(q.id));
-        const deletedQuestions = initialQuestions.filter(q => !currentIds.has(q.id));
-        const updatedQuestions = questions.filter(q => {
-            if (!initialIds.has(q.id)) return false;
-            const initialQ = initialQuestions.find(iq => iq.id === q.id);
-            return JSON.stringify(initialQ) !== JSON.stringify(q);
-        });
-
-        const mapToApiFormat = q => ({
-            ...(q.id && !q.id.startsWith('new_') ? { id: q.id } : {}),
-            question_text: q.text,
-            question_type: q.type,
-            options: q.options || []
-        });
-
-        const creationPromises = createdQuestions.map(q =>
-            fetch(`${API_ENDPOINT}/questions`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(mapToApiFormat(q)),
-            })
-        );
-
-        const updatePromises = updatedQuestions.map(q =>
-            fetch(`${API_ENDPOINT}/questions/${q.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(mapToApiFormat(q)),
-            })
-        );
-
-        const deletionPromises = deletedQuestions.map(q =>
-            fetch(`${API_ENDPOINT}/questions/${q.id}`, {
-                method: 'DELETE',
-            })
-        );
-
-        try {
-            const responses = await Promise.all([
-                ...creationPromises,
-                ...updatePromises,
-                ...deletionPromises,
-            ]);
-
-            for (const response of responses) {
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ detail: response.statusText }));
-                    throw new Error(`Erro na API: ${response.status} - ${errorData.detail}`);
-                }
-            }
-
-            setSaveStatus('Salvo com sucesso!');
-            // Idealmente, após salvar, deveríamos recarregar as perguntas da API
-            // para sincronizar os IDs gerados pelo backend.
-        } catch (error) {
-            console.error("Erro ao salvar perguntas:", error);
-            setSaveStatus(`Erro: ${error.message}`);
-        } finally {
-            setTimeout(() => setSaveStatus(''), 3000);
-        }
     };
     
     const questionTypes = [
@@ -1052,66 +1087,58 @@ const SettingsPage = ({ initialQuestions }) => {
         { value: 'file', label: 'Envio de Arquivo' }
     ];
 
+    const GlobalStatusIndicator = () => {
+        const statusMap = {
+            saving: { icon: <SyncIcon className="h-5 w-5 text-gray-500" />, text: "Salvando..." },
+            saved: { icon: <CloudCheckIcon className="h-5 w-5 text-green-500" />, text: "Salvo na nuvem" },
+            error: { icon: <AlertCircleIcon className="h-5 w-5 text-red-500" />, text: "Erro ao salvar" },
+            idle: { icon: null, text: "" },
+        };
+        const currentStatus = statusMap[globalSaveStatus];
+        if (!currentStatus.icon) return null;
+
+        return (
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+                {currentStatus.icon}
+                <span>{currentStatus.text}</span>
+            </div>
+        );
+    };
+
     return (
         <div className="bg-white p-8 rounded-xl shadow-md border border-gray-100 max-w-4xl mx-auto">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-800">Editor de Formulário</h2>
-                <button onClick={handleAddQuestion} className="px-4 py-2 bg-emerald-500 text-white font-semibold rounded-lg shadow-md hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
-                    Adicionar Pergunta
-                </button>
+                <div className="flex items-center space-x-4">
+                    <GlobalStatusIndicator />
+                    <button onClick={handleAddQuestion} className="px-4 py-2 bg-emerald-500 text-white font-semibold rounded-lg shadow-md hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
+                        Adicionar Pergunta
+                    </button>
+                </div>
             </div>
-            <div ref={containerRef} className="space-y-4">
+            <div className="space-y-4">
                 {questions.map((q, index) => (
                     <DraggableQuestion
                         key={q.id}
                         question={q}
                         index={index}
+                        onQuestionChange={handleQuestionChange}
+                        onRemove={() => handleRemoveQuestion(q)}
                         draggedIdx={draggedIdx}
-                        prevBoundingBox={boundingBoxes.current[q.id]}
                         onDragStart={handleDragStart}
                         onDrop={handleDrop}
-                        onQuestionChange={handleQuestionChange}
-                        onRemoveQuestion={handleRemoveQuestion}
                         questionTypes={questionTypes}
                     />
                 ))}
-            </div>
-            <div className="mt-8 flex items-center justify-end">
-                {saveStatus && <p className="text-sm text-gray-600 mr-4">{saveStatus}</p>}
-                <button onClick={handleSaveChanges} className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    Salvar Alterações
-                </button>
             </div>
         </div>
     );
 };
 
-const DraggableQuestion = ({ question, index, draggedIdx, prevBoundingBox, onDragStart, onDrop, onQuestionChange, onRemoveQuestion, questionTypes }) => {
-    const ref = useRef(null);
-
-    useLayoutEffect(() => {
-        const el = ref.current;
-        if (!el || !prevBoundingBox) return;
-
-        const newBoundingBox = el.getBoundingClientRect();
-        const deltaY = prevBoundingBox.top - newBoundingBox.top;
-
-        if (deltaY !== 0) {
-            requestAnimationFrame(() => {
-                el.style.transform = `translateY(${deltaY}px)`;
-                el.style.transition = 'transform 0s';
-                requestAnimationFrame(() => {
-                    el.style.transform = '';
-                    el.style.transition = 'transform 300ms ease-in-out';
-                });
-            });
-        }
-    }, [prevBoundingBox]);
-
+const DraggableQuestion = ({ question, index, onQuestionChange, onRemove, draggedIdx, onDragStart, onDrop, questionTypes }) => {
+    
     return (
         <div 
-            ref={ref}
-            data-id={question.id}
             draggable={question.type !== 'nps'}
             onDragStart={() => onDragStart(index)}
             onDrop={() => onDrop(index)}
@@ -1159,7 +1186,7 @@ const DraggableQuestion = ({ question, index, draggedIdx, prevBoundingBox, onDra
                 )}
             </div>
             {question.type !== 'nps' && (
-                 <button onClick={() => onRemoveQuestion(index)} className="mt-7 text-gray-400 hover:text-red-500">
+                 <button onClick={onRemove} className="text-gray-400 hover:text-red-500 mt-7">
                     <TrashIcon className="h-5 w-5" />
                 </button>
             )}
@@ -1225,7 +1252,7 @@ export default function App() {
             @keyframes fade-in {
                 from { opacity: 0; }
                 to { opacity: 1; }
-            }
+            } 
             @keyframes slide-up {
                 from { transform: translateY(20px); opacity: 0; }
                 to { transform: translateY(0); opacity: 1; }
@@ -1234,6 +1261,13 @@ export default function App() {
             .animate-slide-up { animation: slide-up 0.4s ease-out forwards; }
             .hide-scrollbar::-webkit-scrollbar { display: none; }
             .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+            .animate-spin {
+                animation: spin 1s linear infinite;
+            }
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
         `}</style>
       <Sidebar activePage={activePage} setActivePage={setActivePage} />
       <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
