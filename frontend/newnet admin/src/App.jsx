@@ -15,7 +15,7 @@ const USER_API_KEY = ""; // <-- INSIRA SUA CHAVE DA API AQUI
 //    Insira o endereço BASE da sua API aqui (ex: http://localhost:8000).
 //    Se esta variável estiver vazia (""), a aplicação usará os dados simulados (mock).
 //    Se preenchida, tentará buscar os dados de '/forms' e '/questions' a partir deste endereço.
-const API_ENDPOINT = ""; // <-- INSIRA O ENDEREÇO BASE DA SUA API AQUI
+const API_ENDPOINT = "http://187.103.0.138:8000"; // <-- INSIRA O ENDEREÇO BASE DA SUA API AQUI
 
 
 // ==================================================================================
@@ -66,12 +66,22 @@ const fetchMockData = () => {
  * @returns {Promise<Object>} Uma promessa que resolve com os dados adaptados.
  */
 const fetchRealData = async (baseUrl) => {
+    // NOTA PARA DESENVOLVIMENTO LOCAL:
+    // Se estiver a ter um erro de 'CORS' ou 'NetworkError' no seu browser ao tentar
+    // conectar-se à sua API local (ex: http://localhost:8000 ou um IP),
+    // é uma restrição de segurança normal do browser.
+    // Para contornar isto APENAS em ambiente de desenvolvimento, pode usar
+    // uma extensão de browser que desabilite o CORS, como "CORS Unblock" ou "Allow CORS".
+    // Lembre-se de desativar a extensão quando não estiver a desenvolver.
     console.log(`Buscando dados da API real em: ${baseUrl}`);
     
+    const formsUrl = `${baseUrl}/forms`;
+    const questionsUrl = `${baseUrl}/questions`;
+
     // Busca os dados de /forms e /questions em paralelo
     const [formsResponse, questionsResponse] = await Promise.all([
-        fetch(`${baseUrl}/forms`),
-        fetch(`${baseUrl}/questions`)
+        fetch(formsUrl),
+        fetch(questionsUrl)
     ]);
 
     if (!formsResponse.ok) throw new Error(`Erro ao buscar /forms: ${formsResponse.status}`);
@@ -942,7 +952,7 @@ const SettingsPage = ({ initialQuestions }) => {
     };
     
     const handleAddQuestion = () => {
-        const newQuestion = { id: `q${Date.now()}`, text: 'Nova Pergunta', type: 'textarea' };
+        const newQuestion = { id: `new_${crypto.randomUUID()}`, text: 'Nova Pergunta', type: 'textarea', options: [] };
         setQuestions([...questions, newQuestion]);
     };
 
@@ -967,13 +977,72 @@ const SettingsPage = ({ initialQuestions }) => {
         setDraggedIdx(null);
     };
 
-    const handleSaveChanges = () => {
+    const handleSaveChanges = async () => {
         setSaveStatus('Salvando...');
-        console.log("Enviando para a API:", questions);
-        setTimeout(() => {
+
+        const initialIds = new Set(initialQuestions.map(q => q.id));
+        const currentIds = new Set(questions.map(q => q.id));
+
+        const createdQuestions = questions.filter(q => !initialIds.has(q.id));
+        const deletedQuestions = initialQuestions.filter(q => !currentIds.has(q.id));
+        const updatedQuestions = questions.filter(q => {
+            if (!initialIds.has(q.id)) return false;
+            const initialQ = initialQuestions.find(iq => iq.id === q.id);
+            return JSON.stringify(initialQ) !== JSON.stringify(q);
+        });
+
+        const mapToApiFormat = q => ({
+            ...(q.id && !q.id.startsWith('new_') ? { id: q.id } : {}),
+            question_text: q.text,
+            question_type: q.type,
+            options: q.options || []
+        });
+
+        const creationPromises = createdQuestions.map(q =>
+            fetch(`${API_ENDPOINT}/questions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(mapToApiFormat(q)),
+            })
+        );
+
+        const updatePromises = updatedQuestions.map(q =>
+            fetch(`${API_ENDPOINT}/questions/${q.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(mapToApiFormat(q)),
+            })
+        );
+
+        const deletionPromises = deletedQuestions.map(q =>
+            fetch(`${API_ENDPOINT}/questions/${q.id}`, {
+                method: 'DELETE',
+            })
+        );
+
+        try {
+            const responses = await Promise.all([
+                ...creationPromises,
+                ...updatePromises,
+                ...deletionPromises,
+            ]);
+
+            for (const response of responses) {
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ detail: response.statusText }));
+                    throw new Error(`Erro na API: ${response.status} - ${errorData.detail}`);
+                }
+            }
+
             setSaveStatus('Salvo com sucesso!');
-            setTimeout(() => setSaveStatus(''), 2000);
-        }, 1000);
+            // Idealmente, após salvar, deveríamos recarregar as perguntas da API
+            // para sincronizar os IDs gerados pelo backend.
+        } catch (error) {
+            console.error("Erro ao salvar perguntas:", error);
+            setSaveStatus(`Erro: ${error.message}`);
+        } finally {
+            setTimeout(() => setSaveStatus(''), 3000);
+        }
     };
     
     const questionTypes = [
