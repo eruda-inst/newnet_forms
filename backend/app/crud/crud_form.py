@@ -65,7 +65,6 @@ def get_questions_for_frontend(db: Session, form_id: int = 1) -> List[dict]:
             "options": [opt.option_text for opt in q.options] if q.options else None,
             "display_order": q.display_order
         }
-        question_dict['std_id'] = f'q{q.id}'
         results.append(question_dict)
         
     return results
