@@ -128,7 +128,7 @@ def get_or_create_attendance(db_local: Session, db_provedor: Session, external_i
         provedor_model.ChamadoProvedor.data_fechamento,
         provedor_model.ChamadoProvedor.data_abertura, 
         provedor_model.TecnicoProvedor.nome
-    ).join(
+    ).select_from(provedor_model.ChamadoProvedor).join( # <-- ESTA LINHA É A CORREÇÃO
         provedor_model.ClienteProvedor, provedor_model.ChamadoProvedor.id_cliente == provedor_model.ClienteProvedor.id
     ).join(
         provedor_model.AssuntoProvedor, provedor_model.ChamadoProvedor.id_assunto == provedor_model.AssuntoProvedor.id
@@ -136,9 +136,11 @@ def get_or_create_attendance(db_local: Session, db_provedor: Session, external_i
         provedor_model.TecnicoProvedor, provedor_model.ChamadoProvedor.id_tecnico == provedor_model.TecnicoProvedor.funcionario
     ).filter(provedor_model.ChamadoProvedor.id == external_id).first()
 
+    # 3. Se não encontrou nem no provedor, então o ID é inválido
     if not atendimento_provedor:
         return None
 
+    # 4. Se encontrou, cria o registro no banco local
     print(f"Atendimento {external_id} encontrado no provedor. Criando localmente...")
     (chamado_id, cliente_razao, cliente_telefone, assunto_nome, 
      data_fechamento, data_abertura, tecnico_nome) = atendimento_provedor
@@ -154,4 +156,3 @@ def get_or_create_attendance(db_local: Session, db_provedor: Session, external_i
         date_closed=data_fechamento,
         telefone_cliente=cliente_telefone
     )
-
