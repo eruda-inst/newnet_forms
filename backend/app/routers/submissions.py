@@ -8,11 +8,10 @@ from app.database import get_db_local
 
 
 router = APIRouter(
-    prefix="/submissions",  
     tags=["Submissions"]     
 )
 
-@router.post("/", status_code=201)
+@router.post("/submissions", status_code=201)
 def submit_answers(
     submission_payload: answer_schema.SubmissionPayload,
     db: Session = Depends(get_db_local)

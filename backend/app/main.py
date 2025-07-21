@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.background import BackgroundScheduler
 from .background_job import verificar_atendimentos_fechados, verificar_formularios_pendentes_para_lembrete
-from .routers import submissions, frontend_api
+from .routers import submissions, frontend_api, admin_api
 from .crud import crud_form
 from .schemas import form as form_schema
 from .database import SessionLocal, LocalBase, engine_local
@@ -58,6 +58,7 @@ app.add_middleware(
 # Inclui o router das submissões para que as rotas fiquem ativas
 app.include_router(submissions.router)
 app.include_router(frontend_api.router)
+app.include_router(admin_api.router)
 
 
 @app.get("/", tags=["Root"])

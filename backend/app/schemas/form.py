@@ -1,6 +1,21 @@
 # app/schemas/form.py
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
+
+
+
+class QuestionUpdatePayload(BaseModel):
+    question_text: str
+    question_type: str
+    options: List[str] = []
+
+# --- Schemas para rota post ---
+
+class NewQuestioRequest(BaseModel):
+    question_text: str
+    question_type: str
+    options: List[str] = []
+
 
 # --- Schemas para Opções de Pergunta ---
 class QuestionOptionBase(BaseModel):

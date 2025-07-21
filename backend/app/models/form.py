@@ -1,5 +1,5 @@
 # app/models/form.py
-from sqlalchemy import Column, Integer, String, DateTime, Enum, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Enum, Text, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from app.database import LocalBase
 import datetime
@@ -27,6 +27,8 @@ class Question(LocalBase):
     question_text = Column(Text, nullable=False)
     question_type = Column(Enum('nps', 'textarea', 'radio', 'file', 'text', name='question_types'), nullable=False)
     display_order = Column(Integer, default=0)
+
+    is_active = Column(Boolean, default=True, nullable=False)
 
     # Relacionamento: Uma pergunta pertence a um formulário
     form = relationship("Form", back_populates="questions")
