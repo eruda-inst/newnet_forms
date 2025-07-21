@@ -49,7 +49,9 @@ def get_questions_for_frontend(db: Session, form_id: int = 1) -> List[dict]:
     """
     Busca as perguntas de um formulário padrão e formata para o frontend.
     """
-    questions = db.query(form_model.Question).filter(form_model.Question.form_id == form_id).options(
+    questions = db.query(form_model.Question).filter(
+        form_model.Question.form_id == form_id,
+        form_model.Question.is_active == True).options(
         joinedload(form_model.Question.options)
     ).order_by(form_model.Question.display_order).all()
 
@@ -61,6 +63,7 @@ def get_questions_for_frontend(db: Session, form_id: int = 1) -> List[dict]:
             "question_type": q.question_type,
             "options": [opt.option_text for opt in q.options] if q.options else None
         }
+        question_dict['std_id'] = f'q{q.id}'
         results.append(question_dict)
         
     return results

@@ -3,7 +3,6 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 
 
-
 class QuestionUpdatePayload(BaseModel):
     question_text: str
     question_type: str
