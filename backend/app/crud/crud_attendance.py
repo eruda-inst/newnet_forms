@@ -1,12 +1,10 @@
 # app/crud/crud_attendance.py
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.models import attendance as attendance_model
 from app.models import provedor as provedor_model
 from app.schemas import answer as answer_schema
 import datetime
-from sqlalchemy.orm import joinedload
 from app.models import attendance as attendance_model, form as form_model
-from app.background_job import ChamadoProvedor, ClienteProvedor, AssuntoProvedor, TecnicoProvedor
 from typing import List, Optional
 
 # --- Funções para Atendimentos ---

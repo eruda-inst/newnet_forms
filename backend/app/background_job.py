@@ -1,9 +1,8 @@
 # app/background_job.py
 
 import datetime
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy.orm import Session
 from app.database import SessionLocal, SessionProvedor
-
 # Importando os novos CRUDs e o serviço de SMS
 from app.crud import crud_attendance
 from app.services import enviar_sms_disparo_pro
