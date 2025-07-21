@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI):
     scheduler = BackgroundScheduler()
 
     # Adiciona a primeira tarefa: buscar novos atendimentos a cada minuto.
-    scheduler.add_job(verificar_atendimentos_fechados, 'interval', seconds=30)
+    scheduler.add_job(verificar_atendimentos_fechados, 'interval', seconds=60)
 
     # Adiciona a segunda tarefa: enviar lembretes a cada hora.
     scheduler.add_job(verificar_formularios_pendentes_para_lembrete, 'interval', hours=1)

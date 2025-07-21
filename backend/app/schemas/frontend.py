@@ -37,3 +37,20 @@ class AttendanceResponse(BaseModel):
     class Config:
         orm_mode = True
         allow_population_by_field_name = True
+
+
+class AttendanceData(BaseModel):
+    id: str
+    clientName: str = Field(..., alias='client_name')
+    technician: Optional[str] = None
+    serviceType: str = Field(..., alias='service_type')
+    status: str
+
+    class Config:
+        orm_mode = True
+        allow_population_by_field_name = True
+
+# O schema completo da resposta, combinando dados do atendimento e as perguntas
+class SurveyLoadResponse(BaseModel):
+    attendance: AttendanceData
+    questions: List[QuestionResponse]

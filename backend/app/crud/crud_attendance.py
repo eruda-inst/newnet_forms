@@ -5,6 +5,7 @@ from app.schemas import answer as answer_schema
 import datetime
 from sqlalchemy.orm import joinedload
 from app.models import attendance as attendance_model, form as form_model
+from app.background_job import ChamadoProvedor, ClienteProvedor, AssuntoProvedor, TecnicoProvedor
 from typing import List
 
 # --- Funções para Atendimentos ---
@@ -103,3 +104,52 @@ def get_all_attendances_formatted(db: Session) -> List[dict]:
         results.append(result_dict)
     
     return results
+
+
+def get_or_create_attendance(db_local: Session, db_provedor: Session, external_id: int) -> Optional[attendance_model.Attendance]:
+    """
+    Busca um atendimento no banco local. Se não encontrar, busca no banco
+    do provedor e o cria localmente (lógica Just-in-Time).
+    """
+    # 1. Tenta encontrar no banco local primeiro (o caso mais comum)
+    db_attendance = db_local.query(attendance_model.Attendance).filter(
+        attendance_model.Attendance.external_id == external_id
+    ).first()
+
+    if db_attendance:
+        return db_attendance
+
+    # 2. Se não encontrou, busca no banco do provedor (o caso da "race condition")
+    print(f"Atendimento {external_id} não encontrado localmente. Buscando no provedor...")
+    atendimento_provedor = db_provedor.query(
+        ChamadoProvedor.id, ClienteProvedor.razao, ClienteProvedor.telefone_celular,
+        AssuntoProvedor.assunto, ChamadoProvedor.data_fechamento,
+        ChamadoProvedor.data_abertura, TecnicoProvedor.nome
+    ).join(
+        ClienteProvedor, ChamadoProvedor.id_cliente == ClienteProvedor.id
+    ).join(
+        AssuntoProvedor, ChamadoProvedor.id_assunto == AssuntoProvedor.id
+    ).outerjoin(
+        TecnicoProvedor, ChamadoProvedor.id_tecnico == TecnicoProvedor.funcionario
+    ).filter(ChamadoProvedor.id == external_id).first()
+
+    # 3. Se não encontrou nem no provedor, então o ID é inválido
+    if not atendimento_provedor:
+        return None
+
+    # 4. Se encontrou, cria o registro no banco local
+    print(f"Atendimento {external_id} encontrado no provedor. Criando localmente...")
+    (chamado_id, cliente_razao, cliente_telefone, assunto_nome, 
+     data_fechamento, data_abertura, tecnico_nome) = atendimento_provedor
+
+    return create_attendance(
+        db=db_local,
+        external_id=chamado_id,
+        form_id=1,
+        client_name=cliente_razao,
+        technician=tecnico_nome,
+        service_type=assunto_nome,
+        date_opened=data_abertura,
+        date_closed=data_fechamento,
+        telefone_cliente=cliente_telefone
+    )

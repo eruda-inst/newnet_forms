@@ -41,7 +41,7 @@ class AssuntoProvedor(ProvedorBase):
 class TecnicoProvedor(ProvedorBase):
     __tablename__ = 'usuarios'
     funcionario = Column(Integer, primary_key=True)
-    name = Column(String)
+    nome = Column(String)
     __table_args__ = {'extend_existing': True}
 
 # Variável para guardar a data da última verificação
@@ -70,7 +70,7 @@ def verificar_atendimentos_fechados():
             ChamadoProvedor.data_fechamento,
             ChamadoProvedor.data_abertura,
             ChamadoProvedor.id_tecnico,
-            TecnicoProvedor.name,
+            TecnicoProvedor.nome,
         ).join(
             ClienteProvedor, ChamadoProvedor.id_cliente == ClienteProvedor.id
         ).join(

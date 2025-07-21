@@ -55,3 +55,10 @@ def get_db_local():
         yield db
     finally:
         db.close()
+
+def get_db_provedor():
+    db = SessionProvedor()
+    try:
+        yield db
+    finally:
+        db.close()
