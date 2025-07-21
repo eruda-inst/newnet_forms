@@ -4,7 +4,7 @@ from sqlalchemy import func
 from app.models import form as form_model
 from app.schemas import form as form_schema
 from sqlalchemy.orm import joinedload
-from typing import List
+from typing import List, Optional
 
 def get_form(db: Session, form_id: int):
     return db.query(form_model.Form).filter(form_model.Form.id == form_id).first()
