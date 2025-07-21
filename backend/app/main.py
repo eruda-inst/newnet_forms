@@ -9,6 +9,7 @@ from .crud import crud_form
 from .schemas import form as form_schema
 from .database import SessionLocal, LocalBase, engine_local
 from .models import user, form, attendance
+from fastapi.middleware.cors import CORSMiddleware
 
 
 print("Criando tabelas no banco de dados, se necessário...")
@@ -44,6 +45,14 @@ app = FastAPI(
     title="API de Pesquisa de Satisfação - Newnet",
     description="API para receber e armazenar respostas do formulário de avaliação de atendimento.",
     version="1.0.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
 )
 
 # Inclui o router das submissões para que as rotas fiquem ativas
