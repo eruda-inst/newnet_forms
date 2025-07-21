@@ -10,7 +10,7 @@ class AnswerCreate(BaseModel):
 # Define a estrutura do payload que o frontend enviará:
 # uma lista de respostas para um atendimento específico.
 class SubmissionPayload(BaseModel):
-    attendance_id: int
+    external_attendance_id: int
     answers: List[AnswerCreate]
 
 

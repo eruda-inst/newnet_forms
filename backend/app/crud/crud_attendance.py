@@ -40,7 +40,7 @@ def create_submission(db: Session, submission: answer_schema.SubmissionPayload):
     Salva uma submissão completa de respostas de um cliente.
     """
     # 1. Encontra o atendimento correspondente
-    db_attendance = get_attendance(db, attendance_id=submission.attendance_id)
+    db_attendance = get_attendance_by_external_id(db, external_id=submission.external_attendance_id)
     if not db_attendance:
         return None # Ou levanta um erro
 
@@ -156,3 +156,7 @@ def get_or_create_attendance(db_local: Session, db_provedor: Session, external_i
         date_closed=data_fechamento,
         telefone_cliente=cliente_telefone
     )
+
+
+def get_attendance_by_external_id(db: Session, external_id: int):
+    return db.query(attendance_model.Attendance).filter(attendance_model.Attendance.external_id == external_id).first()

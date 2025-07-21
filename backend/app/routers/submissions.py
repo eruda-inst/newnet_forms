@@ -25,7 +25,7 @@ def submit_answers(
     """
     # Verifica se o atendimento para o qual as respostas estão sendo enviadas realmente existe
     # e não foi respondido ainda.
-    attendance = crud_attendance.get_attendance(db, attendance_id=submission_payload.attendance_id)
+    attendance = crud_attendance.get_attendance_by_external_id(db, external_id=submission_payload.external_attendance_id)
     
     if not attendance:
         raise HTTPException(
