@@ -8,11 +8,10 @@ from app.crud import crud_form
 from app.schemas import form as form_schema
 
 router = APIRouter(
-    prefix="/questions", # Definindo o prefixo aqui para todas as rotas de perguntas
     tags=["Admin - Questions"]
 )
 
-@router.post("/", response_model=form_schema.QuestionUpdateResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/questions", response_model=form_schema.QuestionUpdateResponse, status_code=status.HTTP_201_CREATED)
 def create_new_question(
     question_payload: form_schema.NewQuestionRequest,
     db: Session = Depends(get_db_local)
@@ -38,7 +37,7 @@ def create_new_question(
     return response_data
 
 
-@router.put("/{question_id_str}", response_model=form_schema.QuestionUpdateResponse)
+@router.put("/questions/{question_id_str}", response_model=form_schema.QuestionUpdateResponse)
 def update_existing_question(
     question_id_str: str,
     question_payload: form_schema.QuestionUpdatePayload,
@@ -74,7 +73,7 @@ def update_existing_question(
     return response_data
 
 
-@router.delete("/{question_id_str}", status_code=status.HTTP_200_OK)
+@router.delete("/questions/{question_id_str}", status_code=status.HTTP_200_OK)
 def delete_question(
     question_id_str: str,
     db: Session = Depends(get_db_local)
