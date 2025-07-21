@@ -9,6 +9,15 @@ class QuestionUpdatePayload(BaseModel):
     question_type: str
     options: List[str] = []
 
+class QuestionUpdateResponse(BaseModel):
+    id: str
+    question_text: str
+    question_type: str
+    options: List[str] = []
+
+class Config:
+    orm_mode = True
+
 # --- Schemas para rota post ---
 
 class NewQuestionRequest(BaseModel):
