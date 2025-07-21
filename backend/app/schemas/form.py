@@ -11,7 +11,7 @@ class QuestionUpdatePayload(BaseModel):
 
 # --- Schemas para rota post ---
 
-class NewQuestioRequest(BaseModel):
+class NewQuestionRequest(BaseModel):
     question_text: str
     question_type: str
     options: List[str] = []
