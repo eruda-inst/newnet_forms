@@ -7,6 +7,7 @@ from app.database import SessionLocal, SessionProvedor
 # Importando os novos CRUDs e o serviço de SMS
 from app.crud import crud_attendance
 from app.services import enviar_sms_disparo_pro
+from app.models import provedor as provedor_model
 
 # Modelos para ler do banco de dados do provedor (MariaDB)
 from .database import ProvedorBase
@@ -61,26 +62,25 @@ def verificar_atendimentos_fechados():
     STATUS_FECHADO = 'F' 
     
     try:
-        # Construindo a consulta com JOIN
         query = db_provedor.query(
-            ChamadoProvedor.id,
-            ClienteProvedor.razao,
-            ClienteProvedor.telefone_celular,
-            AssuntoProvedor.assunto,
-            ChamadoProvedor.data_fechamento,
-            ChamadoProvedor.data_abertura,
-            ChamadoProvedor.id_tecnico,
-            TecnicoProvedor.nome,
+            provedor_model.ChamadoProvedor.id,
+            provedor_model.ClienteProvedor.razao,
+            provedor_model.ClienteProvedor.telefone_celular,
+            provedor_model.AssuntoProvedor.assunto,
+            provedor_model.ChamadoProvedor.data_fechamento,
+            provedor_model.ChamadoProvedor.data_abertura,
+            provedor_model.TecnicoProvedor.nome
         ).join(
-            ClienteProvedor, ChamadoProvedor.id_cliente == ClienteProvedor.id
+            provedor_model.ClienteProvedor, provedor_model.ChamadoProvedor.id_cliente == provedor_model.ClienteProvedor.id
         ).join(
-            AssuntoProvedor, ChamadoProvedor.id_assunto == AssuntoProvedor.id
+            provedor_model.AssuntoProvedor, provedor_model.ChamadoProvedor.id_assunto == provedor_model.AssuntoProvedor.id
         ).outerjoin(
-            TecnicoProvedor, ChamadoProvedor.id_tecnico == TecnicoProvedor.funcionario
+            provedor_model.TecnicoProvedor, provedor_model.ChamadoProvedor.id_tecnico == provedor_model.TecnicoProvedor.funcionario
         ).filter(
-            ChamadoProvedor.status == STATUS_FECHADO,
-            ChamadoProvedor.data_fechamento > ultimo_check
+            provedor_model.ChamadoProvedor.status == STATUS_FECHADO,
+            provedor_model.ChamadoProvedor.data_fechamento > ultimo_check
         )
+
         novos_atendimentos = query.all()
 
         if not novos_atendimentos:

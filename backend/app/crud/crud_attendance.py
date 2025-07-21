@@ -1,12 +1,13 @@
 # app/crud/crud_attendance.py
 from sqlalchemy.orm import Session
 from app.models import attendance as attendance_model
+from app.models import provedor as provedor_model
 from app.schemas import answer as answer_schema
 import datetime
 from sqlalchemy.orm import joinedload
 from app.models import attendance as attendance_model, form as form_model
 from app.background_job import ChamadoProvedor, ClienteProvedor, AssuntoProvedor, TecnicoProvedor
-from typing import List
+from typing import List, Optional
 
 # --- Funções para Atendimentos ---
 
@@ -122,22 +123,24 @@ def get_or_create_attendance(db_local: Session, db_provedor: Session, external_i
     # 2. Se não encontrou, busca no banco do provedor (o caso da "race condition")
     print(f"Atendimento {external_id} não encontrado localmente. Buscando no provedor...")
     atendimento_provedor = db_provedor.query(
-        ChamadoProvedor.id, ClienteProvedor.razao, ClienteProvedor.telefone_celular,
-        AssuntoProvedor.assunto, ChamadoProvedor.data_fechamento,
-        ChamadoProvedor.data_abertura, TecnicoProvedor.nome
+        provedor_model.ChamadoProvedor.id, 
+        provedor_model.ClienteProvedor.razao, 
+        provedor_model.ClienteProvedor.telefone_celular,
+        provedor_model.AssuntoProvedor.assunto, 
+        provedor_model.ChamadoProvedor.data_fechamento,
+        provedor_model.ChamadoProvedor.data_abertura, 
+        provedor_model.TecnicoProvedor.nome
     ).join(
-        ClienteProvedor, ChamadoProvedor.id_cliente == ClienteProvedor.id
+        provedor_model.ClienteProvedor, provedor_model.ChamadoProvedor.id_cliente == provedor_model.ClienteProvedor.id
     ).join(
-        AssuntoProvedor, ChamadoProvedor.id_assunto == AssuntoProvedor.id
+        provedor_model.AssuntoProvedor, provedor_model.ChamadoProvedor.id_assunto == provedor_model.AssuntoProvedor.id
     ).outerjoin(
-        TecnicoProvedor, ChamadoProvedor.id_tecnico == TecnicoProvedor.funcionario
-    ).filter(ChamadoProvedor.id == external_id).first()
+        provedor_model.TecnicoProvedor, provedor_model.ChamadoProvedor.id_tecnico == provedor_model.TecnicoProvedor.funcionario
+    ).filter(provedor_model.ChamadoProvedor.id == external_id).first()
 
-    # 3. Se não encontrou nem no provedor, então o ID é inválido
     if not atendimento_provedor:
         return None
 
-    # 4. Se encontrou, cria o registro no banco local
     print(f"Atendimento {external_id} encontrado no provedor. Criando localmente...")
     (chamado_id, cliente_razao, cliente_telefone, assunto_nome, 
      data_fechamento, data_abertura, tecnico_nome) = atendimento_provedor
@@ -153,3 +156,4 @@ def get_or_create_attendance(db_local: Session, db_provedor: Session, external_i
         date_closed=data_fechamento,
         telefone_cliente=cliente_telefone
     )
+
