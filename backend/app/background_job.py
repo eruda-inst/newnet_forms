@@ -70,7 +70,7 @@ def verificar_atendimentos_fechados():
             ChamadoProvedor.data_fechamento,
             ChamadoProvedor.data_abertura,
             ChamadoProvedor.id_tecnico,
-            TecnicoProvedor.nome,
+            TecnicoProvedor.name,
         ).join(
             ClienteProvedor, ChamadoProvedor.id_cliente == ClienteProvedor.id
         ).join(
