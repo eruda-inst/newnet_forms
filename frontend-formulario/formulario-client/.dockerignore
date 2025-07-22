@@ -1,0 +1,23 @@
+# Dependências locais
+node_modules
+
+# Arquivos de build do Next.js (serão gerados dentro do contêiner)
+.next
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Arquivos do Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Git
+.git
+.gitignore
+
+# Variáveis de ambiente locais e de produção
+.env*.local
+.env

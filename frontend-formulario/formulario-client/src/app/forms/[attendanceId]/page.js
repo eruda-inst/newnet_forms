@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'; // Importando o hook useParams
 
 // --- CONFIGURAÇÃO DA API ---
 // Altere este endpoint para o seu ambiente de produção ou desenvolvimento.
-const API_BASE_URL = 'http://187.103.0.138:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 // --- COMPONENTES AUXILIARES ---
 

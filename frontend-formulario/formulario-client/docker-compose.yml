@@ -1,0 +1,19 @@
+# Versão do Docker Compose.
+version: '3.8'
+
+# Define os serviços (contêineres) que compõem sua aplicação.
+services:
+  # O nome do nosso serviço.
+  meu-app-next:
+    # Define um nome para o contêiner para facilitar a identificação.
+    container_name: meu-app-next-local
+    # Instrução para construir a imagem a partir do Dockerfile local.
+    build: .
+    # Mapeia a porta 3000 da sua máquina para a porta 3000 do contêiner.
+    ports:
+      - '3000:3000'
+    # Carrega as variáveis de ambiente do arquivo .env.local.
+    env_file:
+      - .env.local
+    # Reinicia o contêiner automaticamente se ele falhar.
+    restart: unless-stopped
