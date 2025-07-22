@@ -2,7 +2,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-
+from app.crud import crud_setting
+from app.schemas import setting as setting_schema
 from app.database import get_db_local
 from app.crud import crud_form
 from app.schemas import form as form_schema
@@ -96,3 +97,21 @@ def delete_question(
 
     # 4. Retorna a mensagem de sucesso, como solicitado
     return {"message": f"Pergunta {question_id_str} deletada com sucesso."}
+
+
+@router.get("/settings/sms", response_model=setting_schema.SettingResponse)
+def get_sms_status(db: Session = Depends(get_db_local)):
+    """Verifica se o envio de SMS está habilitado."""
+    db_setting = crud_setting.get_setting(db, key="sms_enabled")
+    is_enabled = db_setting and db_setting.value.lower() == 'true'
+    return {"key": "sms_enabled", "enabled": is_enabled}
+
+@router.put("/settings/sms", response_model=setting_schema.SettingResponse)
+def set_sms_status(
+    status: setting_schema.SettingUpdate,
+    db: Session = Depends(get_db_local)
+):
+    """Habilita ou desabilita o envio de SMS."""
+    new_value = "True" if status.enabled else "False"
+    db_setting = crud_setting.update_setting(db, key="sms_enabled", value=new_value)
+    return {"key": db_setting.key, "enabled": db_setting.value.lower() == 'true'}

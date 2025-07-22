@@ -4,7 +4,7 @@ import datetime
 from sqlalchemy.orm import Session
 from app.database import SessionLocal, SessionProvedor
 # Importando os novos CRUDs e o serviço de SMS
-from app.crud import crud_attendance
+from app.crud import crud_attendance, crud_setting
 from app.services import enviar_sms_disparo_pro
 from app.models import provedor as provedor_model
 
@@ -108,18 +108,21 @@ def verificar_atendimentos_fechados():
                 )
                 print(f"Registro de atendimento para {chamado_id} criado com sucesso.")
 
-                frontend_url = os.getenv("FRONTEND_URL")
-                link_pesquisa = f"{frontend_url}?atendimento_id={novo_atendimento.external_id}"
-                
-                mensagem_sms = (f"Olá, {novo_atendimento.client_name}. Seu atendimento foi finalizado!!")
-
-                if novo_atendimento.telefone_cliente:
-                    enviar_sms_disparo_pro(
-                        telefone=novo_atendimento.telefone_cliente,
-                        mensagem=mensagem_sms
-                    )
+                sms_setting = crud_setting.get_setting(db_local, key="sms_enabled")
+                if sms_setting and sms_setting.value.lower() == 'true':
+                    frontend_url = os.getenv("FRONTEND_URL")
+                    link_pesquisa = f"{frontend_url}?atendimento_id={novo_atendimento.external_id}"
+                    mensagem_sms = (f"Olá, {novo_atendimento.client_name}. Seu atendimento ATD{novo_atendimento.id}foi finalizado!!")
+                    if novo_atendimento.telefone_cliente:
+                        enviar_sms_disparo_pro(
+                            telefone=novo_atendimento.telefone_cliente,
+                            mensagem=mensagem_sms
+                        )
+                    else:
+                        print(f"Atendimento {chamado_id} não possui telefone. SMS não enviado.")
                 else:
-                    print(f"Atendimento {chamado_id} não possui telefone. SMS não enviado.")
+                    print("Envio de SMS está DESABILITADO.")
+
 
         ultimo_check = datetime.datetime.now()
 
@@ -154,19 +157,25 @@ def verificar_formularios_pendentes_para_lembrete():
             return
 
         for atendimento in atendimentos_para_lembrar:
-            mensagem = (f"Olá, {atendimento.client_name}. Notamos que você ainda não respondeu "
-                        f"nossa pesquisa de satisfação sobre o atendimento {atendimento.external_id}. "
-                        "Sua opinião é muito importante!")
             
-            sucesso = enviar_sms_disparo_pro(
-                telefone=atendimento.telefone_cliente,
-                mensagem=mensagem
-            )
+            sms_setting = crud_setting.get_setting(db_local, key="sms_enabled")
+            if sms_setting and sms_setting.value.lower() == 'true':
+                mensagem = (f"Olá, {atendimento.client_name}. Notamos que você ainda não respondeu "
+                            f"nossa pesquisa de satisfação sobre o atendimento {atendimento.external_id}. "
+                            "Sua opinião é muito importante!")
+            
+                sucesso = enviar_sms_disparo_pro(
+                    telefone=atendimento.telefone_cliente,
+                    mensagem=mensagem
+                )
 
-            if sucesso:
-                atendimento.lembrete_enviado = True
-                db_local.commit()
-                print(f"Lembrete enviado para o atendimento {atendimento.external_id}")
+                if sucesso:
+                    atendimento.lembrete_enviado = True
+                    db_local.commit()
+                    print(f"Lembrete enviado para o atendimento {atendimento.external_id}")
+            
+            else:
+                print("Envio de SMS de lembrete está DESABILITADO.")
 
     finally:
         db_local.close()
