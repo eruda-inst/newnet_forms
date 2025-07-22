@@ -1,6 +1,7 @@
 # app/services.py
 import requests
 import os
+import re
 
 def enviar_sms_disparo_pro(telefone: str, mensagem: str) -> bool:
     """
@@ -12,6 +13,17 @@ def enviar_sms_disparo_pro(telefone: str, mensagem: str) -> bool:
     parceiro_id = os.getenv("DISPAROPRO_PARCEIRO_ID")
     url_api = "https://apihttp.disparopro.com.br:8433/mt"
 
+    if not telefone or not telefone.strip():
+        print("Erro: Número de telefone vazio. SMS não enviado")
+        return False
+    
+    numero_limpo = re.sub(r'\D', '', telefone)
+
+    if not numero_limpo.startswith('55'):
+        numero_formatado = f'55{numero_limpo}'
+    else:
+        numero_formatado = numero_limpo
+
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
@@ -19,7 +31,7 @@ def enviar_sms_disparo_pro(telefone: str, mensagem: str) -> bool:
 
     payload = [
       {
-        "numero": telefone,
+        "numero": numero_formatado,
         "servico": "short",
         "mensagem": mensagem,
         "parceiro_id": parceiro_id,
