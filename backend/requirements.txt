@@ -7,3 +7,5 @@ pymysql
 python-dotenv
 requests
 psycopg2-binary
+passlib[bcrypt]
+python-jose[cryptography]
