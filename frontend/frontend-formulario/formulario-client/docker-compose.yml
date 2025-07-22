@@ -11,7 +11,7 @@ services:
     build: .
     # Mapeia a porta 3000 da sua máquina para a porta 3000 do contêiner.
     ports:
-      - '3000:3000'
+      - '80:3000'
     # Carrega as variáveis de ambiente do arquivo .env.local.
     env_file:
       - .env.local

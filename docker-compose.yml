@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  # --- SERVIÇO DO BACKEND (API) ---
+  api:
+    image: newnet/backend-api # Dê um nome para a sua imagem
+    build:
+      context: ./backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    secrets:
+      - db_user
+      - db_password
+    environment:
+      - POSTGRES_USER_FILE=/run/secrets/db_user
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
+      - POSTGRES_SERVER=db # Nome do serviço do banco
+      - POSTGRES_DB=${DB_LOCAL_NAME} # Pode vir de um .env no manager
+    networks:
+      - app-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  # --- SERVIÇO DO BANCO DE DADOS ---
+  db:
+    image: postgres:14-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    secrets:
+      - db_user
+      - db_password
+    environment:
+      - POSTGRES_USER_FILE=/run/secrets/db_user
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
+      - POSTGRES_DB=${DB_LOCAL_NAME}
+    networks:
+      - app-network
+    deploy:
+      placement:
+        constraints: [node.role == manager] # Garante que o DB rode no manager
+
+  # --- SERVIÇO DO FRONTEND FORMULÁRIO (NEXT.JS) ---
+  form:
+    image: newnet/frontend-form
+    build:
+      context: ./frontend/frontend-formulario
+    networks:
+      - app-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  # --- SERVIÇO DO FRONTEND ADMIN (VITE) ---
+  admin:
+    image: newnet/frontend-admin
+    build:
+      context: ./frontend/newnet-admin
+    networks:
+      - app-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  # --- SERVIÇO DO NGINX (PROXY REVERSO) ---
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      - certbot_conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    networks:
+      - app-network
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+  # --- SERVIÇO DO CERTBOT ---
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - certbot_conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    command: "echo 'Aguardando para gerar certificados...'" # Comando inicial vazio
+    networks:
+      - app-network
+    deploy:
+      # Não queremos que ele reinicie, será rodado manualmente
+      restart_policy:
+        condition: none
+
+# --- DEFINIÇÃO DE VOLUMES E SECRETS ---
+volumes:
+  postgres_data:
+  certbot_conf:
+  certbot_www:
+
+networks:
+  app-network:
+    driver: overlay # Rede para comunicação entre serviços no Swarm
+
+secrets:
+  db_user:
+    external: true
+  db_password:
+    external: true
