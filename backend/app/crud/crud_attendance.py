@@ -48,7 +48,7 @@ def create_submission(db: Session, submission: answer_schema.SubmissionPayload):
     saved_answers = []
     for answer_in in submission.answers:
         db_answer = attendance_model.Answer(
-            attendance_id=submission.attendance_id,
+            attendance_id=db_attendance.id,
             question_id=answer_in.question_id,
             answer_value=answer_in.answer_value,
             submitted_at=datetime.datetime.now()
