@@ -111,9 +111,7 @@ def verificar_atendimentos_fechados():
                 frontend_url = os.getenv("FRONTEND_URL")
                 link_pesquisa = f"{frontend_url}?atendimento_id={novo_atendimento.external_id}"
                 
-                mensagem_sms = (f"Olá, {novo_atendimento.client_name}. Sua opinião sobre o seu "
-                              f"atendimento é muito importante para a NewNet! "
-                              f"Responda nossa pesquisa em: {link_pesquisa}")
+                mensagem_sms = (f"Olá, {novo_atendimento.client_name}. Seu atendimento foi finalizado!!")
 
                 if novo_atendimento.telefone_cliente:
                     enviar_sms_disparo_pro(
