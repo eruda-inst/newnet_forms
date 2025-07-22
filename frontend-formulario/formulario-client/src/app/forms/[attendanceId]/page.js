@@ -68,7 +68,7 @@ const FeedbackPage = () => {
   const [errorInfo, setErrorInfo] = useState({ message: '', details: '' });
   const [submissionError, setSubmissionError] = useState(null);
   
-  // **NOVO ESTADO PARA ANIMAÇÃO DE SAÍDA**
+  // NOVO ESTADO PARA ANIMAÇÃO DE SAÍDA
   const [isExiting, setIsExiting] = useState(false);
   
   // Estados para os dados da API
@@ -127,10 +127,15 @@ const FeedbackPage = () => {
     setStatus('submitting');
     setSubmissionError(null);
     
+    // Remove o prefixo "ATD" e converte o restante para um número inteiro.
+    const numericId = parseInt(attendanceId.replace('ATD', ''), 10);
+
     const submissionData = {
-      attendance_id: parseInt(attendance.id, 10),
+      external_attendance_id: numericId,
       answers: Object.entries(answers).map(([question_id, answer_value]) => ({
-        question_id: question_id,
+        // **CORREÇÃO APLICADA AQUI**
+        // Remove o prefixo "q" e converte o restante para um número inteiro.
+        question_id: parseInt(question_id.replace('q', ''), 10),
         answer_value: String(answer_value),
       })),
     };
@@ -150,7 +155,7 @@ const FeedbackPage = () => {
         throw new Error(errorMessage);
       }
       
-      // **LÓGICA DA ANIMAÇÃO**
+      // LÓGICA DA ANIMAÇÃO
       // 1. Ativa o estado de saída para iniciar a animação do formulário
       setIsExiting(true);
       // 2. Aguarda a animação terminar antes de mudar para a tela de sucesso
