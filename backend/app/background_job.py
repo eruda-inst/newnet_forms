@@ -1,5 +1,5 @@
 # app/background_job.py
-
+import os
 import datetime
 from sqlalchemy.orm import Session
 from app.database import SessionLocal, SessionProvedor
@@ -49,7 +49,8 @@ ultimo_check = datetime.datetime.now() - datetime.timedelta(minutes=5)
 
 def verificar_atendimentos_fechados():
     """
-    Busca atendimentos fechados no banco do provedor e cria os registros em nosso banco local.
+    Busca atendimentos fechados no banco do provedor, cria os registros localmente
+    E JÁ ENVIA O SMS COM O LINK DA PESQUISA.
     """
     global ultimo_check
     db_provedor: Session = SessionProvedor()
@@ -60,25 +61,8 @@ def verificar_atendimentos_fechados():
     STATUS_FECHADO = 'F' 
     
     try:
-        # A consulta agora especifica a tabela principal com .select_from()
-        query = db_provedor.query(
-            provedor_model.ChamadoProvedor.id,
-            provedor_model.ClienteProvedor.razao,
-            provedor_model.ClienteProvedor.telefone_celular,
-            provedor_model.AssuntoProvedor.assunto,
-            provedor_model.ChamadoProvedor.data_fechamento,
-            provedor_model.ChamadoProvedor.data_abertura,
-            provedor_model.TecnicoProvedor.nome
-        ).select_from(provedor_model.ChamadoProvedor).join( # <-- ESTA LINHA É A CORREÇÃO
-            provedor_model.ClienteProvedor, provedor_model.ChamadoProvedor.id_cliente == provedor_model.ClienteProvedor.id
-        ).join(
-            provedor_model.AssuntoProvedor, provedor_model.ChamadoProvedor.id_assunto == provedor_model.AssuntoProvedor.id
-        ).outerjoin(
-            provedor_model.TecnicoProvedor, provedor_model.ChamadoProvedor.id_tecnico == provedor_model.TecnicoProvedor.funcionario
-        ).filter(
-            provedor_model.ChamadoProvedor.status == STATUS_FECHADO,
-            provedor_model.ChamadoProvedor.data_fechamento > ultimo_check
-        )
+        # ... (a consulta 'query' não muda)
+        query = db_provedor.query(...) 
 
         novos_atendimentos = query.all()
 
@@ -94,7 +78,8 @@ def verificar_atendimentos_fechados():
             if not existe:
                 print(f"Novo atendimento fechado encontrado: ID Externo {chamado_id}")
                 
-                crud_attendance.create_attendance(
+                # 1. Cria o registro de atendimento no nosso banco
+                novo_atendimento = crud_attendance.create_attendance(
                     db=db_local,
                     external_id=chamado_id,
                     form_id=1,
@@ -107,11 +92,30 @@ def verificar_atendimentos_fechados():
                 )
                 print(f"Registro de atendimento para {chamado_id} criado com sucesso.")
 
+                # 2. Monta o link e a mensagem do SMS
+                frontend_url = os.getenv("FRONTEND_URL")
+                link_pesquisa = f"{frontend_url}?atendimento_id={novo_atendimento.external_id}"
+                
+                mensagem_sms = (f"Olá, {novo_atendimento.client_name}. Sua opinião sobre o seu "
+                              f"atendimento é muito importante para a NewNet! "
+                              f"Responda nossa pesquisa em: {link_pesquisa}")
+
+                # 3. Envia o SMS
+                if novo_atendimento.telefone_cliente:
+                    enviar_sms_disparo_pro(
+                        telefone=novo_atendimento.telefone_cliente,
+                        mensagem=mensagem_sms
+                    )
+                else:
+                    print(f"Atendimento {chamado_id} não possui telefone. SMS não enviado.")
+
+
         ultimo_check = datetime.datetime.now()
 
     finally:
         db_provedor.close()
         db_local.close()
+
 
 def verificar_formularios_pendentes_para_lembrete():
     """

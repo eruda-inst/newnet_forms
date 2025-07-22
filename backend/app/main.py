@@ -79,19 +79,7 @@ def seed_initial_form():
         title="Formulário de Avaliação do Atendimento - Newnet",
         description="Avalie sua experiência com nosso atendimento.",
         questions=[
-            form_schema.QuestionCreate(question_text="Como você avaliaria o atendimento que recebeu?", question_type='radio', display_order=1, options=[
-                form_schema.QuestionOptionCreate(option_text='Excelente'), form_schema.QuestionOptionCreate(option_text='Bom'), form_schema.QuestionOptionCreate(option_text='Regular'), form_schema.QuestionOptionCreate(option_text='Ruim'), form_schema.QuestionOptionCreate(option_text='Péssimo'),
-            ]),
-            form_schema.QuestionCreate(question_text="O(a) atendente foi claro(a) e educado(a) durante o atendimento?", question_type='radio', display_order=2, options=[
-                form_schema.QuestionOptionCreate(option_text='Sim'), form_schema.QuestionOptionCreate(option_text='Parcialmente'), form_schema.QuestionOptionCreate(option_text='Não'),
-            ]),
-            form_schema.QuestionCreate(question_text="Seu problema foi resolvido com este atendimento?", question_type='radio', display_order=3, options=[
-                form_schema.QuestionOptionCreate(option_text='Sim, completamente'), form_schema.QuestionOptionCreate(option_text='Parcialmente'), form_schema.QuestionOptionCreate(option_text='Não foi resolvido'),
-            ]),
-            form_schema.QuestionCreate(question_text="Quanto tempo que levou para seu problema ser atendido/resolvido?", question_type='radio', display_order=4, options=[
-                form_schema.QuestionOptionCreate(option_text='Imediatamente'), form_schema.QuestionOptionCreate(option_text='Até 30 minutos'), form_schema.QuestionOptionCreate(option_text='Entre 30 min e 2 horas'), form_schema.QuestionOptionCreate(option_text='Mais de 2 horas'), form_schema.QuestionOptionCreate(option_text='Ainda não foi resolvido'),
-            ]),
-            form_schema.QuestionCreate(question_text="Em uma escala de 0 a 10, qual a probabilidade de você recomendar a Newnet para um amigo ou familiar?", question_type='nps', display_order=5),
+            form_schema.QuestionCreate(question_text="Em uma escala de 0 a 10, qual a probabilidade de você recomendar a Newnet para um amigo ou familiar?", question_type='nps', display_order=5)
         ]
     )
     crud_form.create_form(db, form=form_data)
