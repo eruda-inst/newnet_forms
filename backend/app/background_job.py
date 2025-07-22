@@ -49,8 +49,7 @@ ultimo_check = datetime.datetime.now() - datetime.timedelta(minutes=5)
 
 def verificar_atendimentos_fechados():
     """
-    Busca atendimentos fechados no banco do provedor, unindo as tabelas
-    necessárias, e cria os registros em nosso banco local.
+    Busca atendimentos fechados no banco do provedor e cria os registros em nosso banco local.
     """
     global ultimo_check
     db_provedor: Session = SessionProvedor()
@@ -61,6 +60,7 @@ def verificar_atendimentos_fechados():
     STATUS_FECHADO = 'F' 
     
     try:
+        # A consulta agora especifica a tabela principal com .select_from()
         query = db_provedor.query(
             provedor_model.ChamadoProvedor.id,
             provedor_model.ClienteProvedor.razao,
@@ -69,7 +69,7 @@ def verificar_atendimentos_fechados():
             provedor_model.ChamadoProvedor.data_fechamento,
             provedor_model.ChamadoProvedor.data_abertura,
             provedor_model.TecnicoProvedor.nome
-        ).join(
+        ).select_from(provedor_model.ChamadoProvedor).join( # <-- ESTA LINHA É A CORREÇÃO
             provedor_model.ClienteProvedor, provedor_model.ChamadoProvedor.id_cliente == provedor_model.ClienteProvedor.id
         ).join(
             provedor_model.AssuntoProvedor, provedor_model.ChamadoProvedor.id_assunto == provedor_model.AssuntoProvedor.id
@@ -87,13 +87,13 @@ def verificar_atendimentos_fechados():
             return
 
         for atendimento in novos_atendimentos:
-            # Desempacotando os resultados da tupla
-            (chamado_id, cliente_razao, cliente_telefone, assunto_nome, data_fechamento, data_abertura, tecnico_nome) = atendimento
+            (chamado_id, cliente_razao, cliente_telefone, assunto_nome, 
+             data_fechamento, data_abertura, tecnico_nome) = atendimento
             
-            # Verifica se já não criamos um registro para este atendimento
             existe = db_local.query(crud_attendance.attendance_model.Attendance).filter_by(external_id=chamado_id).first()
             if not existe:
                 print(f"Novo atendimento fechado encontrado: ID Externo {chamado_id}")
+                
                 crud_attendance.create_attendance(
                     db=db_local,
                     external_id=chamado_id,
