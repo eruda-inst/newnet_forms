@@ -7,7 +7,7 @@ import { useParams } from 'next/navigation'; // Importando o hook useParams
 // Altere este endpoint para o seu ambiente de produção ou desenvolvimento.
 const API_BASE_URL = "https://forms.newnet.com.br/api"
 // --- COMPONENTES AUXILIARES ---
-
+console.log("teste", API_BASE_URL)
 /**
  * Componente para exibir um spinner de carregamento.
  */
