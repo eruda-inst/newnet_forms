@@ -1,249 +1,250 @@
-  'use client';
+'use client';
 
-  import React, { useState, useEffect } from 'react';
-  import { useParams } from 'next/navigation'; // Importando o hook useParams
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation'; // Importando o hook useParams
 
-  // --- CONFIGURAÇÃO DA API ---
-  // Altere este endpoint para o seu ambiente de produção ou desenvolvimento.
-  const API_BASE_URL = "https://forms.newnet.com.br/api"
-  // --- COMPONENTES AUXILIARES ---
-  console.log("teste", API_BASE_URL)
-  /**
-   * Componente para exibir um spinner de carregamento.
-   */
-  const LoadingSpinner = () => (
-    <div className="flex flex-col justify-center items-center h-screen bg-gray-50 text-center">
-      <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600"></div>
-      <p className="mt-4 text-lg text-gray-700">Carregando formulário...</p>
+// --- CONFIGURAÇÃO DA API ---
+// Altere este endpoint para o seu ambiente de produção ou desenvolvimento.
+const API_BASE_URL = "https://forms.newnet.com.br/api"
+// --- COMPONENTES AUXILIARES ---
+console.log("teste", API_BASE_URL)
+/**
+ * Componente para exibir um spinner de carregamento.
+ */
+const LoadingSpinner = () => (
+  <div className="flex flex-col justify-center items-center h-screen bg-gray-50 text-center">
+    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600"></div>
+    <p className="mt-4 text-lg text-gray-700">Carregando formulário...</p>
+  </div>
+);
+
+/**
+ * Componente para exibir mensagens de erro de forma clara.
+ * @param {{ message: string, details?: string }} props
+ */
+const ErrorDisplay = ({ message, details }) => (
+  <div className="flex flex-col justify-center items-center h-screen bg-red-50 p-4 text-center">
+    <div className="bg-white p-8 rounded-lg shadow-md max-w-sm w-full">
+        <svg className="w-16 h-16 mx-auto text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <h2 className="mt-4 text-2xl font-bold text-red-800">Ocorreu um Erro</h2>
+        <p className="mt-2 text-red-600">{message}</p>
+        {details && <p className="mt-1 text-xs text-gray-500">{details}</p>}
     </div>
-  );
+  </div>
+);
 
-  /**
-   * Componente para exibir mensagens de erro de forma clara.
-   * @param {{ message: string, details?: string }} props
-   */
-  const ErrorDisplay = ({ message, details }) => (
-    <div className="flex flex-col justify-center items-center h-screen bg-red-50 p-4 text-center">
-      <div className="bg-white p-8 rounded-lg shadow-md max-w-sm w-full">
-          <svg className="w-16 h-16 mx-auto text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-          <h2 className="mt-4 text-2xl font-bold text-red-800">Ocorreu um Erro</h2>
-          <p className="mt-2 text-red-600">{message}</p>
-          {details && <p className="mt-1 text-xs text-gray-500">{details}</p>}
-      </div>
-    </div>
-  );
-
-  /**
-   * Componente para a tela de sucesso após o envio, com animação de entrada.
-   */
-  const SuccessDisplay = () => {
-      const [visible, setVisible] = useState(false);
-      useEffect(() => {
-          // Ativa a animação logo após o componente ser montado
-          const timer = setTimeout(() => setVisible(true), 50);
-          return () => clearTimeout(timer);
-      }, []);
-
-      return (
-          <div className="flex flex-col justify-center items-center h-screen bg-green-50 p-4 text-center">
-              <div className={`bg-white p-8 rounded-lg shadow-md max-w-sm w-full transform transition-all duration-500 ease-out ${visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
-                  <svg className="w-16 h-16 mx-auto text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                  <h2 className="mt-4 text-2xl font-bold text-green-800">Obrigado!</h2>
-                  <p className="mt-2 text-gray-700">Seu feedback foi enviado com sucesso e nos ajudará a melhorar nossos serviços.</p>
-              </div>
-          </div>
-      );
-  };
-
-  /**
-   * NOVO COMPONENTE: Tela para formulários que já foram respondidos.
-   */
-  const AlreadyAnsweredDisplay = ({ technicianName }) => (
-      <div className="flex flex-col justify-center items-center h-screen bg-blue-50 p-4 text-center">
-          <div className="bg-white p-8 rounded-lg shadow-md max-w-sm w-full">
-              <svg className="w-16 h-16 mx-auto text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-              <h2 className="mt-4 text-2xl font-bold text-blue-800">Feedback Já Enviado</h2>
-              <p className="mt-2 text-gray-700">
-                  Este formulário de avaliação para o atendimento do técnico <span className="font-semibold">{technicianName || ''}</span> já foi respondido.
-              </p>
-              <p className="mt-4 text-gray-600">Agradecemos sua colaboração!</p>
-          </div>
-      </div>
-  );
-
-
-  // --- COMPONENTE PRINCIPAL DA PÁGINA (PARA NEXT.JS) ---
-  // IMPORTANTE: Este arquivo DEVE ser salvo como `app/forms/[attendanceId]/page.jsx`
-  const FeedbackPage = () => {
-    const params = useParams();
-    const { attendanceId } = params;
-    console.log(params)
-
-    // Estados para controlar o fluxo da aplicação
-    const [status, setStatus] = useState('loading'); // loading, error, ready, submitting, success, alreadyAnswered
-    const [errorInfo, setErrorInfo] = useState({ message: '', details: '' });
-    const [submissionError, setSubmissionError] = useState(null);
-    
-    // NOVO ESTADO PARA ANIMAÇÃO DE SAÍDA
-    const [isExiting, setIsExiting] = useState(false);
-    
-    // Estados para os dados da API
-    const [attendance, setAttendance] = useState(null);
-    const [questions, setQuestions] = useState([]);
-    const [answers, setAnswers] = useState({});
-
-    // Efeito para buscar os dados iniciais
+/**
+ * Componente para a tela de sucesso após o envio, com animação de entrada.
+ */
+const SuccessDisplay = () => {
+    const [visible, setVisible] = useState(false);
     useEffect(() => {
-      if (!attendanceId) {
-        return; 
-      }
+        // Ativa a animação logo após o componente ser montado
+        const timer = setTimeout(() => setVisible(true), 50);
+        return () => clearTimeout(timer);
+    }, []);
 
-      const fetchData = async () => {
-        setStatus('loading');
-        try {
-          // **LÓGICA DE BUSCA ATUALIZADA**
-          // Remove o prefixo "ATD" para usar no endpoint da API
-          const numericId = parseInt(attendanceId.replace('ATD', ''), 10);
-          if (isNaN(numericId)) {
-              throw new Error('ID de atendimento inválido.');
-          }
+    return (
+        <div className="flex flex-col justify-center items-center h-screen bg-green-50 p-4 text-center">
+            <div className={`bg-white p-8 rounded-lg shadow-md max-w-sm w-full transform transition-all duration-500 ease-out ${visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
+                <svg className="w-16 h-16 mx-auto text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <h2 className="mt-4 text-2xl font-bold text-green-800">Obrigado!</h2>
+                <p className="mt-2 text-gray-700">Seu feedback foi enviado com sucesso e nos ajudará a melhorar nossos serviços.</p>
+            </div>
+        </div>
+    );
+};
 
-          const response = await fetch(`${API_BASE_URL}/survey/${numericId}`);
+/**
+ * NOVO COMPONENTE: Tela para formulários que já foram respondidos.
+ */
+const AlreadyAnsweredDisplay = ({ technicianName }) => (
+    <div className="flex flex-col justify-center items-center h-screen bg-blue-50 p-4 text-center">
+        <div className="bg-white p-8 rounded-lg shadow-md max-w-sm w-full">
+            <svg className="w-16 h-16 mx-auto text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <h2 className="mt-4 text-2xl font-bold text-blue-800">Feedback Já Enviado</h2>
+            <p className="mt-2 text-gray-700">
+                Este formulário de avaliação para o atendimento do técnico <span className="font-semibold">{technicianName || ''}</span> já foi respondido.
+            </p>
+            <p className="mt-4 text-gray-600">Agradecemos sua colaboração!</p>
+        </div>
+    </div>
+);
 
-          if (!response.ok) {
-              if (response.status === 404) {
-                  throw new Error('Atendimento não encontrado. Verifique o ID.');
-              }
-              throw new Error(`Falha ao buscar dados do atendimento (status: ${response.status})`);
-          }
 
-          const surveyData = await response.json();
-          
-          if (!surveyData || !surveyData.attendance) {
-              throw new Error('Formato de dados inválido recebido da API.');
-          }
-          
-          setAttendance(surveyData.attendance);
-          
-          // **LÓGICA DE VERIFICAÇÃO ATUALIZADA**
-          // Verifica o status do atendimento para ver se já foi respondido.
-          // Assumindo que um status diferente de 'ABERTO' significa que não pode ser respondido.
-          if (surveyData.attendance.status !== 'ABERTO') {
-              setStatus('alreadyAnswered');
-              return; // Interrompe a execução para não mostrar o formulário
-          }
+// --- COMPONENTE PRINCIPAL DA PÁGINA (PARA NEXT.JS) ---
+// IMPORTANTE: Este arquivo DEVE ser salvo como `app/forms/[attendanceId]/page.jsx`
+const FeedbackPage = () => {
+  const params = useParams();
+  const { attendanceId } = params;
+  console.log(params)
 
-          setQuestions(surveyData.questions);
-          setStatus('ready');
+  // Estados para controlar o fluxo da aplicação
+  const [status, setStatus] = useState('loading'); // loading, error, ready, submitting, success, alreadyAnswered
+  const [errorInfo, setErrorInfo] = useState({ message: '', details: '' });
+  const [submissionError, setSubmissionError] = useState(null);
+  
+  // NOVO ESTADO PARA ANIMAÇÃO DE SAÍDA
+  const [isExiting, setIsExiting] = useState(false);
+  
+  // Estados para os dados da API
+  const [attendance, setAttendance] = useState(null);
+  const [questions, setQuestions] = useState([]);
+  const [answers, setAnswers] = useState({});
 
-        } catch (err) {
-          setStatus('error');
-          setErrorInfo({ message: 'Não foi possível carregar os dados do formulário.', details: err.message });
-        }
-      };
+  // Efeito para buscar os dados iniciais
+  useEffect(() => {
+    if (!attendanceId) {
+      return; 
+    }
 
-      fetchData();
-    }, [attendanceId]);
-
-    // Função para lidar com a alteração de valores nos inputs do formulário
-    const handleAnswerChange = (questionId, value) => {
-      setSubmissionError(null);
-      setAnswers(prev => ({ ...prev, [questionId]: value }));
-    };
-
-    // Função para enviar o formulário
-    const handleSubmit = async (e) => {
-      e.preventDefault();
-      setStatus('submitting');
-      setSubmissionError(null);
-      
-      // Remove o prefixo "ATD" e converte o restante para um número inteiro.
-      const numericId = parseInt(attendanceId.replace('ATD', ''), 10);
-
-      const submissionData = {
-        external_attendance_id: numericId,
-        answers: Object.entries(answers).map(([question_id, answer_value]) => ({
-          question_id: parseInt(question_id.replace('q', ''), 10),
-          answer_value: String(answer_value),
-        })),
-      };
-
+    const fetchData = async () => {
+      setStatus('loading');
       try {
-        const response = await fetch(`${API_BASE_URL}/submissions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(submissionData),
-        });
+        // **LÓGICA DE BUSCA ATUALIZADA**
+        // Remove o prefixo "ATD" para usar no endpoint da API
+        const numericId = parseInt(attendanceId.replace('ATD', ''), 10);
+        if (isNaN(numericId)) {
+            throw new Error('ID de atendimento inválido.');
+        }
+
+        const response = await fetch(`${API_BASE_URL}/survey/${numericId}`);
 
         if (!response.ok) {
-          const errorData = await response.json();
-          const errorMessage = errorData?.detail?.[0]?.msg || 'Ocorreu um erro desconhecido no servidor.';
-          throw new Error(errorMessage);
+            if (response.status === 404) {
+                throw new Error('Atendimento não encontrado. Verifique o ID.');
+            }
+            throw new Error(`Falha ao buscar dados do atendimento (status: ${response.status})`);
+        }
+
+        const surveyData = await response.json();
+        
+        if (!surveyData || !surveyData.attendance) {
+            throw new Error('Formato de dados inválido recebido da API.');
         }
         
-        // LÓGICA DA ANIMAÇÃO
-        // 1. Ativa o estado de saída para iniciar a animação do formulário
-        setIsExiting(true);
-        // 2. Aguarda a animação terminar antes de mudar para a tela de sucesso
-        setTimeout(() => {
-            setStatus('success');
-        }, 500); // Duração da animação em milissegundos
+        setAttendance(surveyData.attendance);
+        
+        // **LÓGICA DE VERIFICAÇÃO CORRIGIDA**
+        // Permite a resposta apenas se o status for 'ABERTO' ou 'PENDENTE'.
+        const allowedToAnswer = surveyData.attendance.status === 'ABERTO' || surveyData.attendance.status === 'Pendente';
+
+        if (!allowedToAnswer) {
+            setStatus('alreadyAnswered');
+            return; // Interrompe a execução para não mostrar o formulário
+        }
+
+        setQuestions(surveyData.questions);
+        setStatus('ready');
 
       } catch (err) {
-        setSubmissionError(err.message);
-        setStatus('ready');
+        setStatus('error');
+        setErrorInfo({ message: 'Não foi possível carregar os dados do formulário.', details: err.message });
       }
     };
+
+    fetchData();
+  }, [attendanceId]);
+
+  // Função para lidar com a alteração de valores nos inputs do formulário
+  const handleAnswerChange = (questionId, value) => {
+    setSubmissionError(null);
+    setAnswers(prev => ({ ...prev, [questionId]: value }));
+  };
+
+  // Função para enviar o formulário
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setStatus('submitting');
+    setSubmissionError(null);
     
-    // Função para renderizar cada tipo de pergunta
-    const renderQuestion = (q) => {
-      const commonLabelClasses = "block text-gray-800 font-medium mb-3 text-base";
+    // Remove o prefixo "ATD" e converte o restante para um número inteiro.
+    const numericId = parseInt(attendanceId.replace('ATD', ''), 10);
+
+    const submissionData = {
+      external_attendance_id: numericId,
+      answers: Object.entries(answers).map(([question_id, answer_value]) => ({
+        question_id: parseInt(question_id.replace('q', ''), 10),
+        answer_value: String(answer_value),
+      })),
+    };
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/submissions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(submissionData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        const errorMessage = errorData?.detail?.[0]?.msg || 'Ocorreu um erro desconhecido no servidor.';
+        throw new Error(errorMessage);
+      }
       
-      switch (q.question_type) {
-        case 'nps':
-          return (
-            <div key={q.id} className="mb-8">
-              <label className={commonLabelClasses}>{q.question_text}</label>
-              <div className="flex flex-wrap justify-center gap-2" role="group" aria-label={q.question_text}>
-                {[...Array(11).keys()].map(num => (
-                  <button
-                    type="button"
-                    key={num}
-                    onClick={() => handleAnswerChange(q.id, num)}
-                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full text-sm font-semibold transition-all duration-200 transform focus:outline-none focus:ring-4 focus:ring-blue-300 ${
-                      answers[q.id] === num
-                        ? 'bg-blue-600 text-white scale-110 shadow-lg'
-                        : 'bg-gray-200 text-gray-700 hover:bg-blue-200 hover:scale-105'
-                    }`}
-                  >
-                    {num}
-                  </button>
-                ))}
-              </div>
+      // LÓGICA DA ANIMAÇÃO
+      // 1. Ativa o estado de saída para iniciar a animação do formulário
+      setIsExiting(true);
+      // 2. Aguarda a animação terminar antes de mudar para a tela de sucesso
+      setTimeout(() => {
+          setStatus('success');
+      }, 500); // Duração da animação em milissegundos
+
+    } catch (err) {
+      setSubmissionError(err.message);
+      setStatus('ready');
+    }
+  };
+  
+  // Função para renderizar cada tipo de pergunta
+  const renderQuestion = (q) => {
+    const commonLabelClasses = "block text-gray-800 font-medium mb-3 text-base";
+    
+    switch (q.question_type) {
+      case 'nps':
+        return (
+          <div key={q.id} className="mb-8">
+            <label className={commonLabelClasses}>{q.question_text}</label>
+            <div className="flex flex-wrap justify-center gap-2" role="group" aria-label={q.question_text}>
+              {[...Array(11).keys()].map(num => (
+                <button
+                  type="button"
+                  key={num}
+                  onClick={() => handleAnswerChange(q.id, num)}
+                  className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full text-sm font-semibold transition-all duration-200 transform focus:outline-none focus:ring-4 focus:ring-blue-300 ${
+                    answers[q.id] === num
+                      ? 'bg-blue-600 text-white scale-110 shadow-lg'
+                      : 'bg-gray-200 text-gray-700 hover:bg-blue-200 hover:scale-105'
+                  }`}
+                >
+                  {num}
+                </button>
+              ))}
             </div>
-          );
-        case 'textarea':
-          return (
-            <div key={q.id} className="mb-8">
-              <label htmlFor={q.id} className={commonLabelClasses}>{q.question_text}</label>
-              <textarea
-                id={q.id}
-                rows="4"
-                value={answers[q.id] || ''}
-                onChange={(e) => handleAnswerChange(q.id, e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow shadow-sm text-gray-900 placeholder:text-gray-400"
-                placeholder="Sua opinião é muito importante..."
-              ></textarea>
-            </div>
-          );
-        case 'radio':
-          return (
-            <div key={q.id} className="mb-8">
-              <fieldset>
-                <legend className={commonLabelClasses}>{q.question_text}</legend>
-                <div className="flex flex-col sm:flex-row gap-3">
+          </div>
+        );
+      case 'textarea':
+        return (
+          <div key={q.id} className="mb-8">
+            <label htmlFor={q.id} className={commonLabelClasses}>{q.question_text}</label>
+            <textarea
+              id={q.id}
+              rows="4"
+              value={answers[q.id] || ''}
+              onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow shadow-sm text-gray-900 placeholder:text-gray-400"
+              placeholder="Sua opinião é muito importante..."
+            ></textarea>
+          </div>
+        );
+      case 'radio':
+        return (
+          <div key={q.id} className="mb-8">
+            <fieldset>
+              <legend className={commonLabelClasses}>{q.question_text}</legend>
+              <div className="flex flex-col sm:flex-row gap-3">
                   {q.options.map(option => (
                     <label key={option} className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all duration-200 w-full ${answers[q.id] === option ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500' : 'border-gray-300 hover:border-blue-400'}`}>
                       <input
