@@ -26,7 +26,7 @@ const ErrorDisplay = ({ message, details }) => (
   <div className="flex flex-col justify-center items-center h-screen bg-red-50 p-4 text-center">
     <div className="bg-white p-8 rounded-lg shadow-md max-w-sm w-full">
         <svg className="w-16 h-16 mx-auto text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        <h2 className="mt-4 text-2xl font-bold text-red-800">Ocorreu um Erro</h2>
+        <h2 className="mt-4 text-2xl font-bold text-red-800">Ocorreu um Errooooooooooo</h2>
         <p className="mt-2 text-red-600">{message}</p>
         {details && <p className="mt-1 text-xs text-gray-500">{details}</p>}
     </div>
