@@ -6,50 +6,68 @@ services:
     image: newnet/backend-api
     build:
       context: ./backend
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     ports:
-      # Expõe a porta 8000 do contêiner para a porta 8000 do localhost do host
-      - "127.0.0.1:8000:8000"
+      - "172.0.0.1:8000:8000"
+    # Variáveis de ambiente NÃO-SENSÍVEIS
+    environment:
+      # Configs do DB Local (PostgreSQL)
+      TZ: America/Bahia
+      DB_LOCAL_HOST: db
+      DB_LOCAL_PORT: 5432
+      DB_LOCAL_NAME: pesquisa_db
+      DB_LOCAL_DIALETO: postgresql+psycopg2
+      # Configs do DB Provedor (MariaDB)
+      DB_PROVEDOR_HOST: 187.103.0.136
+      DB_PROVEDOR_PORT: 3306
+      DB_PROVEDOR_NOME_BANCO: ixcprovedor
+      DB_PROVEDOR_DIALETO: mysql+pymysql
+      # Configs da Aplicação
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
     secrets:
+      # Segredos do DB Local
       - db_user
       - db_password
-    environment:
-      - POSTGRES_USER_FILE=/run/secrets/db_user
-      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
-      - POSTGRES_SERVER=db
-      - POSTGRES_DB=${DB_LOCAL_NAME}
+      # Segredos do DB Provedor
+      - db_provedor_user
+      - db_provedor_password
+      # Segredos da Aplicação
+      - secret_key
+      - disparopro_api_key
     networks:
       - app-network
+    depends_on:
+      - db
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
 
-  # --- SERVIÇO DO BANCO DE DADOS ---
+  # --- SERVIÇO DO BANCO DE DADOS LOCAL ---
   db:
     image: postgres:14-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data/
+    environment:
+      TZ: America/Bahia
+      POSTGRES_DB: pesquisa_db
+      POSTGRES_USER_FILE: /run/secrets/db_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
     secrets:
       - db_user
       - db_password
-    environment:
-      - POSTGRES_USER_FILE=/run/secrets/db_user
-      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
-      - POSTGRES_DB=${DB_LOCAL_NAME}
     networks:
       - app-network
     deploy:
       placement:
         constraints: [node.role == manager]
 
-  # --- SERVIÇO DO FRONTEND FORMULÁRIO (NEXT.JS) ---
+  # --- SERVIÇOS DE FRONTEND ---
   form:
     image: newnet/frontend-form
     build:
       context: ./frontend/frontend-formulario
     ports:
-      # Expõe a porta 3000 do contêiner para a porta 3000 do localhost do host
       - "127.0.0.1:3000:3000"
     networks:
       - app-network
@@ -58,13 +76,11 @@ services:
       restart_policy:
         condition: on-failure
 
-  # --- SERVIÇO DO FRONTEND ADMIN (VITE) ---
   admin:
     image: newnet/frontend-admin
     build:
       context: ./frontend/newnet-admin
     ports:
-      # Expõe a porta 80 do contêiner para a porta 8080 do localhost do host
       - "127.0.0.1:8080:80"
     networks:
       - app-network
@@ -80,8 +96,18 @@ networks:
   app-network:
     driver: overlay
 
+# Define que os segredos são externos e devem ser criados manualmente
 secrets:
   db_user:
     external: true
   db_password:
     external: true
+  db_provedor_user:
+    external: true
+  db_provedor_password:
+    external: true
+  secret_key:
+    external: true
+  disparopro_api_key:
+    external: true
+
