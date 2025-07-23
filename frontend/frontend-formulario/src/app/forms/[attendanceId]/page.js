@@ -26,7 +26,7 @@ const ErrorDisplay = ({ message, details }) => (
   <div className="flex flex-col justify-center items-center h-screen bg-red-50 p-4 text-center">
     <div className="bg-white p-8 rounded-lg shadow-md max-w-sm w-full">
         <svg className="w-16 h-16 mx-auto text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        <h2 className="mt-4 text-2xl font-bold text-red-800">Ocorreu um Errooooooooooo</h2>
+        <h2 className="mt-4 text-2xl font-bold text-red-800">Ocorreu um Erro</h2>
         <p className="mt-2 text-red-600">{message}</p>
         {details && <p className="mt-1 text-xs text-gray-500">{details}</p>}
     </div>
@@ -55,6 +55,22 @@ const SuccessDisplay = () => {
     );
 };
 
+/**
+ * NOVO COMPONENTE: Tela para formulários que já foram respondidos.
+ */
+const AlreadyAnsweredDisplay = ({ technicianName }) => (
+    <div className="flex flex-col justify-center items-center h-screen bg-blue-50 p-4 text-center">
+        <div className="bg-white p-8 rounded-lg shadow-md max-w-sm w-full">
+            <svg className="w-16 h-16 mx-auto text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <h2 className="mt-4 text-2xl font-bold text-blue-800">Feedback Já Enviado</h2>
+            <p className="mt-2 text-gray-700">
+                Este formulário de avaliação para o atendimento do técnico <span className="font-semibold">{technicianName || ''}</span> já foi respondido.
+            </p>
+            <p className="mt-4 text-gray-600">Agradecemos sua colaboração!</p>
+        </div>
+    </div>
+);
+
 
 // --- COMPONENTE PRINCIPAL DA PÁGINA (PARA NEXT.JS) ---
 // IMPORTANTE: Este arquivo DEVE ser salvo como `app/forms/[attendanceId]/page.jsx`
@@ -64,7 +80,7 @@ const FeedbackPage = () => {
   console.log(params)
 
   // Estados para controlar o fluxo da aplicação
-  const [status, setStatus] = useState('loading'); // loading, error, ready, submitting, success
+  const [status, setStatus] = useState('loading'); // loading, error, ready, submitting, success, alreadyAnswered
   const [errorInfo, setErrorInfo] = useState({ message: '', details: '' });
   const [submissionError, setSubmissionError] = useState(null);
   
@@ -85,25 +101,39 @@ const FeedbackPage = () => {
     const fetchData = async () => {
       setStatus('loading');
       try {
-        const [attendanceResponse, questionsResponse] = await Promise.all([
-          fetch(`${API_BASE_URL}/forms`),
-          fetch(`${API_BASE_URL}/questions`)
-        ]);
-
-        if (!attendanceResponse.ok) throw new Error(`Falha ao buscar atendimentos (status: ${attendanceResponse.status})`);
-        if (!questionsResponse.ok) throw new Error(`Falha ao buscar perguntas (status: ${questionsResponse.status})`);
-
-        const allAttendances = await attendanceResponse.json();
-        const allQuestions = await questionsResponse.json();
-        
-        const currentAttendance = allAttendances.find(att => att.id === attendanceId);
-        
-        if (!currentAttendance) {
-          throw new Error('Atendimento não encontrado. Verifique o ID.');
+        // **LÓGICA DE BUSCA ATUALIZADA**
+        // Remove o prefixo "ATD" para usar no endpoint da API
+        const numericId = parseInt(attendanceId.replace('ATD', ''), 10);
+        if (isNaN(numericId)) {
+            throw new Error('ID de atendimento inválido.');
         }
 
-        setAttendance(currentAttendance);
-        setQuestions(allQuestions);
+        const response = await fetch(`${API_BASE_URL}/survey/${numericId}`);
+
+        if (!response.ok) {
+            if (response.status === 404) {
+                throw new Error('Atendimento não encontrado. Verifique o ID.');
+            }
+            throw new Error(`Falha ao buscar dados do atendimento (status: ${response.status})`);
+        }
+
+        const surveyData = await response.json();
+        
+        if (!surveyData || !surveyData.attendance) {
+            throw new Error('Formato de dados inválido recebido da API.');
+        }
+        
+        setAttendance(surveyData.attendance);
+        
+        // **LÓGICA DE VERIFICAÇÃO ATUALIZADA**
+        // Verifica o status do atendimento para ver se já foi respondido.
+        // Assumindo que um status diferente de 'ABERTO' significa que não pode ser respondido.
+        if (surveyData.attendance.status !== 'ABERTO') {
+            setStatus('alreadyAnswered');
+            return; // Interrompe a execução para não mostrar o formulário
+        }
+
+        setQuestions(surveyData.questions);
         setStatus('ready');
 
       } catch (err) {
@@ -133,8 +163,6 @@ const FeedbackPage = () => {
     const submissionData = {
       external_attendance_id: numericId,
       answers: Object.entries(answers).map(([question_id, answer_value]) => ({
-        // **CORREÇÃO APLICADA AQUI**
-        // Remove o prefixo "q" e converte o restante para um número inteiro.
         question_id: parseInt(question_id.replace('q', ''), 10),
         answer_value: String(answer_value),
       })),
@@ -242,6 +270,8 @@ const FeedbackPage = () => {
   if (status === 'loading' || !attendanceId) return <LoadingSpinner />;
   if (status === 'error') return <ErrorDisplay message={errorInfo.message} details={errorInfo.details} />;
   if (status === 'success') return <SuccessDisplay />;
+  if (status === 'alreadyAnswered') return <AlreadyAnsweredDisplay technicianName={attendance?.technician} />;
+
 
   return (
     <div className="bg-gray-100 min-h-screen font-sans flex flex-col items-center p-4 sm:p-6 lg:p-8">

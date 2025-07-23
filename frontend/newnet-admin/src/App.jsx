@@ -41,7 +41,10 @@ const MOCK_API_DATA = {
     { id: 'q2', text: 'O que mais influenciou sua nota?', type: 'textarea', display_order: 1 },
     { id: 'q3', text: 'O técnico foi pontual e profissional?', type: 'radio', options: ['Sim', 'Não'], display_order: 2 },
     { id: 'q4', text: 'Se desejar, envie uma foto ou vídeo do problema.', type: 'file', display_order: 3 }
-  ]
+  ],
+  settings: {
+    sms: { enabled: true }
+  }
 };
 
 // --- FUNÇÕES DE BUSCA DE DADOS ---
@@ -196,6 +199,8 @@ const XIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" he
 const DownloadIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> );
 const SyncIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin" {...props}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> );
 const CloudCheckIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/><path d="m9 12 2 2 4-4"/></svg> );
+const MessageSquareIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> );
+const EditIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> );
 
 
 // --- COMPONENTES DA UI ---
@@ -949,6 +954,34 @@ const AnalyticsAnalysis = ({ formsData, questionsData }) => {
 };
 
 const SettingsPage = ({ initialQuestions }) => {
+    const [activeTab, setActiveTab] = useState('form'); // 'form' ou 'sms'
+
+    return (
+        <div className="space-y-6">
+            <div className="flex border-b">
+                <button 
+                    onClick={() => setActiveTab('form')}
+                    className={`flex items-center gap-2 px-4 py-2 text-sm font-medium ${activeTab === 'form' ? 'border-b-2 border-emerald-500 text-emerald-600' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    <EditIcon className="h-5 w-5" />
+                    Editor de Formulário
+                </button>
+                <button 
+                    onClick={() => setActiveTab('sms')}
+                    className={`flex items-center gap-2 px-4 py-2 text-sm font-medium ${activeTab === 'sms' ? 'border-b-2 border-emerald-500 text-emerald-600' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    <MessageSquareIcon className="h-5 w-5" />
+                    Configurações de SMS
+                </button>
+            </div>
+
+            {activeTab === 'form' && <FormEditorPage initialQuestions={initialQuestions} />}
+            {activeTab === 'sms' && <SmsSettingsPage />}
+        </div>
+    );
+};
+
+const FormEditorPage = ({ initialQuestions }) => {
     const [questions, setQuestions] = useState(initialQuestions || []);
     const [globalSaveStatus, setGlobalSaveStatus] = useState('idle'); // 'idle', 'saving', 'saved', 'error'
     const [draggedIdx, setDraggedIdx] = useState(null);
@@ -1059,7 +1092,6 @@ const SettingsPage = ({ initialQuestions }) => {
     const handleQuestionChange = (index, field, value) => {
         setQuestions(currentQuestions => {
             const updatedQuestions = [...currentQuestions];
-            // FIX: Cria um novo objeto para a questão atualizada para garantir a imutabilidade.
             updatedQuestions[index] = { ...updatedQuestions[index], [field]: value };
             return updatedQuestions;
         });
@@ -1190,6 +1222,73 @@ const DraggableQuestion = ({ question, index, onQuestionChange, onRemove, dragge
                     <TrashIcon className="h-5 w-5" />
                 </button>
             )}
+        </div>
+    );
+};
+
+const SmsSettingsPage = () => {
+    const [isEnabled, setIsEnabled] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchSmsSettings = async () => {
+            setIsLoading(true);
+            setError(null);
+            try {
+                const response = await fetch(`${API_ENDPOINT}/settings/sms`);
+                if (!response.ok) throw new Error("Não foi possível carregar as configurações de SMS.");
+                const data = await response.json();
+                setIsEnabled(data.enabled);
+            } catch (err) {
+                setError(err.message);
+                console.error(err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchSmsSettings();
+    }, []);
+
+    const handleToggle = async () => {
+        const newEnabledState = !isEnabled;
+        setIsEnabled(newEnabledState); // Atualiza a UI imediatamente
+
+        try {
+            const response = await fetch(`${API_ENDPOINT}/settings/sms`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled: newEnabledState }),
+            });
+            if (!response.ok) {
+                // Reverte a alteração na UI em caso de erro
+                setIsEnabled(!newEnabledState);
+                throw new Error("Não foi possível salvar a alteração.");
+            }
+        } catch (err) {
+            setError(err.message);
+            console.error(err);
+        }
+    };
+
+    if (isLoading) {
+        return <div className="text-center p-8">Carregando configurações...</div>;
+    }
+
+    return (
+        <div className="bg-white p-8 rounded-xl shadow-md border border-gray-100 max-w-4xl mx-auto">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Configurações de SMS</h2>
+            {error && <p className="text-red-500 mb-4">{error}</p>}
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                    <h3 className="font-semibold text-gray-700">Notificações por SMS</h3>
+                    <p className="text-sm text-gray-500">Ative para enviar lembretes e notificações por SMS aos clientes.</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" checked={isEnabled} onChange={handleToggle} className="sr-only peer" />
+                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-emerald-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+            </div>
         </div>
     );
 };
