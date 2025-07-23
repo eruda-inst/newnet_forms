@@ -111,8 +111,8 @@ def verificar_atendimentos_fechados():
                 sms_setting = crud_setting.get_setting(db_local, key="sms_enable")
                 if sms_setting and sms_setting.value.lower() == 'true':
                     frontend_url = os.getenv("FRONTEND_URL")
-                    link_pesquisa = f"{frontend_url}?atendimento_id={novo_atendimento.external_id}"
-                    mensagem_sms = (f"Olá, {novo_atendimento.client_name}. Seu atendimento ATD{novo_atendimento.id}foi finalizado!!")
+                    link_pesquisa = f"{frontend_url}/ATD{novo_atendimento.external_id}"
+                    mensagem_sms = (f"Olá, {novo_atendimento.client_name}. Por favor avalie seu atendimento em {link_pesquisa} é muito importante para nós obrigado!")
                     if novo_atendimento.telefone_cliente:
                         enviar_sms_disparo_pro(
                             telefone=novo_atendimento.telefone_cliente,
