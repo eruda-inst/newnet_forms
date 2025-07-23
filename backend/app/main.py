@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from apscheduler.schedulers.background import BackgroundScheduler
 from .background_job import verificar_atendimentos_fechados, verificar_formularios_pendentes_para_lembrete
 from .routers import submissions, frontend_api, admin_api
-from .crud import crud_form
+from .crud import crud_form, crud_setting
 from .schemas import form as form_schema
 from .database import SessionLocal, LocalBase, engine_local
 from .models import user, form, attendance
@@ -22,15 +22,16 @@ print("Tabelas prontas.")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
+    db = SessionLocal()
+    try:
+        crud_setting.initialize_setting(db, key="sms_enable", value='True')
+    finally:
+        db.close()
+
     print("Iniciando agendador de tarefas...")
     scheduler = BackgroundScheduler()
-
-    # Adiciona a primeira tarefa: buscar novos atendimentos a cada minuto.
     scheduler.add_job(verificar_atendimentos_fechados, 'interval', seconds=60)
-
-    # Adiciona a segunda tarefa: enviar lembretes a cada hora.
     scheduler.add_job(verificar_formularios_pendentes_para_lembrete, 'interval', hours=1)
-
     scheduler.start()
 
     yield
