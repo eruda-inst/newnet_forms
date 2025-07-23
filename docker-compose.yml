@@ -34,7 +34,9 @@ services:
       - db_provedor_password
       # Segredos da Aplicação
       - secret_key
+      # Configuração Disparopro
       - disparopro_api_key
+      - disparopro_parceiro_id
     networks:
       - app-network
     depends_on:
@@ -111,4 +113,7 @@ secrets:
     external: true
   disparopro_api_key:
     external: true
+  disparopro_parceiro_id:
+    external: true
+
 
