@@ -108,7 +108,7 @@ def verificar_atendimentos_fechados():
                 )
                 print(f"Registro de atendimento para {chamado_id} criado com sucesso.")
 
-                sms_setting = crud_setting.get_setting(db_local, key="sms_enabled")
+                sms_setting = crud_setting.get_setting(db_local, key="sms_enable")
                 if sms_setting and sms_setting.value.lower() == 'true':
                     frontend_url = os.getenv("FRONTEND_URL")
                     link_pesquisa = f"{frontend_url}?atendimento_id={novo_atendimento.external_id}"
@@ -158,7 +158,7 @@ def verificar_formularios_pendentes_para_lembrete():
 
         for atendimento in atendimentos_para_lembrar:
             
-            sms_setting = crud_setting.get_setting(db_local, key="sms_enabled")
+            sms_setting = crud_setting.get_setting(db_local, key="sms_enable")
             if sms_setting and sms_setting.value.lower() == 'true':
                 mensagem = (f"Olá, {atendimento.client_name}. Notamos que você ainda não respondeu "
                             f"nossa pesquisa de satisfação sobre o atendimento {atendimento.external_id}. "
