@@ -9,7 +9,7 @@ import React, { useState, useEffect, useMemo, useRef, useLayoutEffect } from 're
 // 1. CHAVE DA API DO GEMINI (PARA RECURSOS DE IA)
 //    Para rodar a funcionalidade de IA localmente, insira sua chave da API do
 //    Google AI Studio aqui. Obtenha sua chave em: https://aistudio.google.com/app/apikey
-const USER_API_KEY = ""; // <-- INSIRA SUA CHAVE DA API AQUI
+const USER_API_KEY = "AIzaSyBE0iAa-9IQEnQGcHCbPVGsMEysTI-2lyY"; // <-- INSIRA SUA CHAVE DA API AQUI
 
 // 2. ENDEREÇO DA API DE DADOS
 //    Insira o endereço BASE da sua API aqui (ex: http://localhost:8000).
