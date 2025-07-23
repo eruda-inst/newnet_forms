@@ -126,9 +126,10 @@ const FeedbackPage = () => {
         setAttendance(surveyData.attendance);
         
         // **LÓGICA DE VERIFICAÇÃO CORRIGIDA**
-        // Agora, só considera o formulário como respondido se o status for explicitamente 'FECHADO'.
-        // Qualquer outro status (ABERTO, PENDENTE, etc.) permitirá a resposta.
-        if (surveyData.attendance.status === 'FECHADO') {
+        // Permite a resposta apenas se o status for 'ABERTO' ou 'PENDENTE'.
+        const allowedToAnswer = surveyData.attendance.status === 'ABERTO' || surveyData.attendance.status === 'Pendente';
+        console.log("status: ", surveyData.attendance.status)
+        if (!allowedToAnswer) {
             setStatus('alreadyAnswered');
             return; // Interrompe a execução para não mostrar o formulário
         }
