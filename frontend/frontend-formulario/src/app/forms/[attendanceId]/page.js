@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'; // Importando o hook useParams
 
 // --- CONFIGURAÇÃO DA API ---
 // Altere este endpoint para o seu ambiente de produção ou desenvolvimento.
-const API_ENDPOINT = "https://forms.newnet.com.br/api"
+const API_BASE_URL = "https://forms.newnet.com.br/api"
 // --- COMPONENTES AUXILIARES ---
 
 /**
@@ -61,6 +61,7 @@ const SuccessDisplay = () => {
 const FeedbackPage = () => {
   const params = useParams();
   const { attendanceId } = params;
+  console.log(params)
 
   // Estados para controlar o fluxo da aplicação
   const [status, setStatus] = useState('loading'); // loading, error, ready, submitting, success
