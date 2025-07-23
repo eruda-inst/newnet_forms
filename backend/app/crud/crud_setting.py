@@ -20,3 +20,11 @@ def update_setting(db: Session, key: str, value: str) -> setting_model.Setting:
     db.commit()
     db.refresh(db_setting)
     return db_setting
+
+def initialize_setting(db: Session, key: str, value: str):
+    """Verifica se uma configuração existe e, se não, a cria com um valor padrão."""
+    db_setting = get_setting(db, key=key)
+    if not db_setting:
+        print(f"Configuração '{key}' não encontrada. Inicializando com o valor '{value}'.")
+        # Chama a função update, que também cria se não existir
+        update_setting(db, key=key, value=value)
