@@ -5,8 +5,7 @@ import { useParams } from 'next/navigation'; // Importando o hook useParams
 
 // --- CONFIGURAÇÃO DA API ---
 // Altere este endpoint para o seu ambiente de produção ou desenvolvimento.
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-
+const API_ENDPOINT = "https://forms.newnet.com.br/api"
 // --- COMPONENTES AUXILIARES ---
 
 /**
