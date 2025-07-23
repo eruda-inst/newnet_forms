@@ -102,7 +102,7 @@ def delete_question(
 @router.get("/settings/sms", response_model=setting_schema.SettingResponse)
 def get_sms_status(db: Session = Depends(get_db_local)):
     """Verifica se o envio de SMS está habilitado."""
-    db_setting = crud_setting.get_setting(db, key="sms_enabled")
+    db_setting = crud_setting.get_setting(db, key="sms_enable")
     is_enabled = db_setting and db_setting.value.lower() == 'true'
     return {"key": "sms_enabled", "enabled": is_enabled}
 
@@ -113,5 +113,5 @@ def set_sms_status(
 ):
     """Habilita ou desabilita o envio de SMS."""
     new_value = "True" if status.enabled else "False"
-    db_setting = crud_setting.update_setting(db, key="sms_enabled", value=new_value)
+    db_setting = crud_setting.update_setting(db, key="sms_enable", value=new_value)
     return {"key": db_setting.key, "enabled": db_setting.value.lower() == 'true'}
