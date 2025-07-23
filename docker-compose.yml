@@ -21,6 +21,7 @@ services:
       DB_PROVEDOR_PORT: 3306
       DB_PROVEDOR_NOME_BANCO: ixcprovedor
       DB_PROVEDOR_DIALETO: mysql+pymysql
+      FRONTEND_URL: https://pesquisa.newnet.com.br/forms
       # Configs da Aplicação
       ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: 30

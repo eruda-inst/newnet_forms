@@ -2,6 +2,7 @@
 import requests
 import os
 import re
+from app.database import get_secret
 
 def enviar_sms_disparo_pro(telefone: str, mensagem: str) -> bool:
     """
@@ -9,8 +10,8 @@ def enviar_sms_disparo_pro(telefone: str, mensagem: str) -> bool:
 
     Retorna True se o envio foi bem-sucedido, False caso contrário.
     """
-    api_key = os.getenv("DISPAROPRO_API_KEY")
-    parceiro_id = os.getenv("DISPAROPRO_PARCEIRO_ID")
+    api_key = get_secret("disparopro_api_key")
+    parceiro_id = get_secret("disparopro_parceiro_id")
     url_api = "https://apihttp.disparopro.com.br:8433/mt"
 
     if not telefone or not telefone.strip():
