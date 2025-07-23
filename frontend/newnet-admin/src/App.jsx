@@ -15,7 +15,7 @@ const USER_API_KEY = ""; // <-- INSIRA SUA CHAVE DA API AQUI
 //    Insira o endereço BASE da sua API aqui (ex: http://localhost:8000).
 //    Se esta variável estiver vazia (""), a aplicação usará os dados simulados (mock).
 //    Se preenchida, tentará buscar os dados de '/forms' e '/questions' a partir deste endereço.
-const API_ENDPOINT = "https://forms.newnet.com.br"; // <-- INSIRA O ENDEREÇO BASE DA SUA API AQUI
+const API_ENDPOINT = "https://forms.newnet.com.br/api"; // <-- INSIRA O ENDEREÇO BASE DA SUA API AQUI
 
 
 // ==================================================================================
