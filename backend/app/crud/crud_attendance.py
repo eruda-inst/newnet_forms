@@ -160,3 +160,14 @@ def get_or_create_attendance(db_local: Session, db_provedor: Session, external_i
 
 def get_attendance_by_external_id(db: Session, external_id: int):
     return db.query(attendance_model.Attendance).filter(attendance_model.Attendance.external_id == external_id).first()
+
+
+def get_attendance_with_answers(db: Session, external_id: int) -> Optional[attendance_model.Attendance]:
+    """
+    Busca um atendimento específico pelo seu ID externo, já carregando
+    suas respostas e as perguntas vinculadas a essas respostas.
+    """
+    return db.query(attendance_model.Attendance).options(
+        joinedload(attendance_model.Attendance.answers)
+        .joinedload(attendance_model.Answer.question)
+    ).filter(attendance_model.Attendance.external_id == external_id).first()

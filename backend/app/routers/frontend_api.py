@@ -63,4 +63,40 @@ def get_survey_data(
         "questions": questions_data
     }
 
-# ... (rotas existentes /forms e /questions) ...
+
+@router.get("/forms/{external_id}", response_model=frontend_schema.AttendanceWithAnswersResponse)
+def get_answered_survey(
+    external_id: int,
+    db: Session = Depends(get_db_local)
+):
+    """
+    Busca os detalhes e as respostas de um atendimento já finalizado.
+    """
+    # 1. Usa a nova função CRUD para buscar tudo de uma vez
+    attendance = crud_attendance.get_attendance_with_answers(db=db, external_id=external_id)
+
+    if not attendance:
+        raise HTTPException(status_code=404, detail="Atendimento não encontrado.")
+
+    # 2. Formata os dados do atendimento
+    attendance_data = {
+        "id": f"ATD{attendance.external_id}",
+        "clientName": attendance.client_name,
+        "technician": attendance.technician,
+        "serviceType": attendance.service_type,
+        "status": attendance.status
+    }
+
+    # 3. Formata a lista de perguntas e respostas
+    answered_questions_list = []
+    for answer in attendance.answers:
+        answered_questions_list.append({
+            "question_text": answer.question.question_text,
+            "answer_value": answer.answer_value
+        })
+
+    # 4. Monta e retorna a resposta final
+    return {
+        "attendance": attendance_data,
+        "answered_questions": answered_questions_list
+    }

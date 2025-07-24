@@ -54,3 +54,14 @@ class AttendanceData(BaseModel):
 class SurveyLoadResponse(BaseModel):
     attendance: AttendanceData
     questions: List[QuestionResponse]
+
+class AnsweredQuestionResponse(BaseModel):
+    # Combina a pergunta e a resposta em um único objeto
+    question_text: str
+    answer_value: str
+
+class AttendanceWithAnswersResponse(BaseModel):
+    # Reutilizamos o schema de dados do atendimento
+    attendance: AttendanceData
+    # E adicionamos a lista de perguntas e respostas
+    answered_questions: List[AnsweredQuestionResponse]
