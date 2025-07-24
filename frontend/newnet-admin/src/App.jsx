@@ -602,10 +602,9 @@ const DashboardPage = ({ formsData, questionsData, onNavigate, timeFilter }) => 
 };
 
 
-const FormDetailModal = ({ form, questions, onClose }) => {
-    const getQuestionById = (questionId) => {
-        return questions.find(q => q.id === questionId);
-    };
+const FormDetailModal = ({ form, onClose, isLoading }) => {
+    const attendance = form.attendance || form;
+    const responses = form.answered_questions || form.responses || [];
 
     return (
         <div 
@@ -623,37 +622,44 @@ const FormDetailModal = ({ form, questions, onClose }) => {
                 
                 <div className="p-6 border-b border-gray-200">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div><strong className="text-gray-500 block">Cliente:</strong> <span className="text-gray-800">{form.clientName}</span></div>
-                        <div><strong className="text-gray-500 block">Técnico:</strong> <span className="text-gray-800">{form.technician}</span></div>
-                        <div><strong className="text-gray-500 block">ID Atendimento:</strong> <span className="text-gray-800 font-mono">{form.id}</span></div>
-                        <div><strong className="text-gray-500 block">Tipo de Serviço:</strong> <span className="text-gray-800">{form.serviceType}</span></div>
-                        <div><strong className="text-gray-500 block">Data de Fechamento:</strong> <span className="text-gray-800">{new Date(form.dateClosed).toLocaleString('pt-BR')}</span></div>
+                        <div><strong className="text-gray-500 block">Cliente:</strong> <span className="text-gray-800">{attendance.clientName || attendance.client_name}</span></div>
+                        <div><strong className="text-gray-500 block">Técnico:</strong> <span className="text-gray-800">{attendance.technician}</span></div>
+                        <div><strong className="text-gray-500 block">ID Atendimento:</strong> <span className="text-gray-800 font-mono">{attendance.id}</span></div>
+                        <div><strong className="text-gray-500 block">Tipo de Serviço:</strong> <span className="text-gray-800">{attendance.serviceType || attendance.service_type}</span></div>
+                        <div><strong className="text-gray-500 block">Data de Fechamento:</strong> <span className="text-gray-800">{new Date(attendance.dateClosed || attendance.date_closed).toLocaleString('pt-BR')}</span></div>
                     </div>
                 </div>
                 
                 <div className="overflow-y-auto p-6 bg-gray-50 rounded-b-xl hide-scrollbar">
                     <h4 className="text-lg font-semibold text-gray-700 mb-4">Respostas do Cliente</h4>
-                    <div className="space-y-5">
-                        {form.responses && form.responses.map(response => {
-                            const question = getQuestionById(response.questionId);
-                            if (!question) return null;
-
-                            return (
-                                 <div key={response.questionId}>
-                                    <p className="text-sm font-medium text-gray-600">{question.text}</p>
-                                    {question.type === 'file' ? (
-                                        <div className="mt-2">
-                                            <a href={response.answer} target="_blank" rel="noopener noreferrer" className="inline-block">
-                                                <img src={response.answer} alt="Anexo do cliente" className="max-w-xs rounded-lg shadow-md hover:shadow-lg transition-shadow" />
-                                            </a>
-                                        </div>
-                                    ) : (
-                                        <p className="text-lg text-emerald-800 mt-1 pl-4 border-l-2 border-emerald-200">{response.answer}</p>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
+                     {isLoading ? (
+                        <div className="flex justify-center items-center h-40">
+                            <SyncIcon className="h-8 w-8 text-gray-400" />
+                        </div>
+                    ) : (
+                        <div className="space-y-5">
+                            {(responses && responses.length > 0) ? responses.map((response, index) => {
+                                const answer = response.answer_value || response.answer;
+                                const questionText = response.question_text;
+                                const isImage = typeof answer === 'string' && (answer.startsWith('http'));
+                                
+                                return (
+                                     <div key={index}>
+                                        <p className="text-sm font-medium text-gray-600">{questionText}</p>
+                                        {isImage ? (
+                                            <div className="mt-2">
+                                                <a href={answer} target="_blank" rel="noopener noreferrer" className="inline-block">
+                                                    <img src={answer} alt="Anexo do cliente" className="max-w-xs rounded-lg shadow-md hover:shadow-lg transition-shadow" />
+                                                </a>
+                                            </div>
+                                        ) : (
+                                            <p className="text-lg text-emerald-800 mt-1 pl-4 border-l-2 border-emerald-200">{answer}</p>
+                                        )}
+                                    </div>
+                                );
+                            }) : <p className="text-gray-500">Nenhuma resposta detalhada encontrada para este formulário.</p>}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -663,6 +669,8 @@ const FormDetailModal = ({ form, questions, onClose }) => {
 const FormsListPage = ({ formsData, questionsData, initialFilters, onFiltersChange }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedForm, setSelectedForm] = useState(null);
+    const [detailedForm, setDetailedForm] = useState(null);
+    const [isModalLoading, setIsModalLoading] = useState(false);
 
     const technicians = useMemo(() => [...new Set(formsData.map(f => f.technician))], [formsData]);
 
@@ -681,12 +689,32 @@ const FormsListPage = ({ formsData, questionsData, initialFilters, onFiltersChan
             .filter(form => form.clientName.toLowerCase().includes(searchTerm.toLowerCase()));
     }, [formsData, initialFilters, searchTerm]);
     
-    const handleRowClick = (form) => {
+    const handleRowClick = async (form) => {
         if (form.status === 'Respondido') {
             setSelectedForm(form);
+            setIsModalLoading(true);
+            setDetailedForm(null);
+
+            try {
+                const response = await fetch(`${API_ENDPOINT}/forms/${form.id}`);
+                if (!response.ok) {
+                    throw new Error(`Falha ao buscar detalhes do formulário: ${response.statusText}`);
+                }
+                const data = await response.json();
+                setDetailedForm(data);
+            } catch (error) {
+                console.error(error);
+            } finally {
+                setIsModalLoading(false);
+            }
         }
     };
-    
+
+    const handleCloseModal = () => {
+        setSelectedForm(null);
+        setDetailedForm(null);
+    };
+
     const downloadCSV = () => {
         const headers = ["ID Atendimento", "Cliente", "Técnico", "Tipo Serviço", "Data Fechamento", "Status", "NPS"];
         const rows = filteredData.map(form => [
@@ -779,7 +807,13 @@ const FormsListPage = ({ formsData, questionsData, initialFilters, onFiltersChan
                     </table>
                 </div>
             </div>
-            {selectedForm && <FormDetailModal form={selectedForm} questions={questionsData} onClose={() => setSelectedForm(null)} />}
+            {selectedForm && (
+                <FormDetailModal 
+                    form={detailedForm || selectedForm} 
+                    onClose={handleCloseModal}
+                    isLoading={isModalLoading}
+                />
+            )}
         </>
     );
 };
