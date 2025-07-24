@@ -64,30 +64,46 @@ def get_survey_data(
     }
 
 
-@router.get("/forms/{external_id}", response_model=frontend_schema.AttendanceWithAnswersResponse)
+@router.get("/forms/{external_id_str}", response_model=frontend_schema.AttendanceWithAnswersResponse)
 def get_answered_survey(
-    external_id: int,
+    external_id_str: str, # 1. MUDANÇA: Agora recebemos uma string
     db: Session = Depends(get_db_local)
 ):
     """
-    Busca os detalhes e as respostas de um atendimento já finalizado.
+    Busca os detalhes e as respostas de um atendimento já finalizado,
+    usando um ID no formato 'ATD...'.
     """
-    # 1. Usa a nova função CRUD para buscar tudo de uma vez
-    attendance = crud_attendance.get_attendance_with_answers(db=db, external_id=external_id)
+    # 2. LÓGICA PARA VALIDAR E EXTRAIR O NÚMERO DO ID
+    if not external_id_str.upper().startswith("ATD"):
+        raise HTTPException(
+            status_code=400,
+            detail="Formato de ID inválido. O ID deve começar com 'ATD'."
+        )
+    try:
+        # Pega o que vem depois dos 3 primeiros caracteres ("ATD") e converte para inteiro
+        numerical_id = int(external_id_str[3:])
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Formato de ID inválido. A parte numérica do ID é inválida."
+        )
+
+    # 3. Usa o ID numérico para buscar no banco (o resto da função não muda)
+    attendance = crud_attendance.get_attendance_with_answers(db=db, external_id=numerical_id)
 
     if not attendance:
-        raise HTTPException(status_code=404, detail="Atendimento não encontrado.")
+        raise HTTPException(status_code=404, detail=f"Atendimento com ID {numerical_id} não encontrado.")
 
-    # 2. Formata os dados do atendimento
+    # Formata os dados do atendimento
     attendance_data = {
         "id": f"ATD{attendance.external_id}",
-        "clientName": attendance.client_name,
+        "client_name": attendance.client_name,
         "technician": attendance.technician,
-        "serviceType": attendance.service_type,
+        "service_type": attendance.service_type,
         "status": attendance.status
     }
 
-    # 3. Formata a lista de perguntas e respostas
+    # Formata a lista de perguntas e respostas
     answered_questions_list = []
     for answer in attendance.answers:
         answered_questions_list.append({
@@ -95,7 +111,7 @@ def get_answered_survey(
             "answer_value": answer.answer_value
         })
 
-    # 4. Monta e retorna a resposta final
+    # Monta e retorna a resposta final
     return {
         "attendance": attendance_data,
         "answered_questions": answered_questions_list
