@@ -506,7 +506,7 @@ const DashboardPage = ({ formsData, questionsData, onNavigate, timeFilter }) => 
 
     const chartData = useMemo(() => {
         if (!filteredForms || !questionsData) return [];
-        const answeredForms = filteredForms.filter(f => f.status === 'Respondido' && f.responses);
+        const answeredForms = filteredForms.filter(f => f.status === 'Respondido');
         if (answeredForms.length === 0) return [];
 
         return questionsData
@@ -515,9 +515,9 @@ const DashboardPage = ({ formsData, questionsData, onNavigate, timeFilter }) => 
                 if (question.type === 'nps') {
                     const npsCounts = Array(11).fill(0).map((_, i) => ({ name: `${i}`, value: 0 }));
                     answeredForms.forEach(form => {
-                        const response = form.responses.find(r => r.questionId === question.id);
-                        if (response && typeof response.answer === 'number' && response.answer >= 0 && response.answer <= 10) {
-                            npsCounts[response.answer].value++;
+                        const score = form.satisfaction;
+                        if (typeof score === 'number' && score >= 0 && score <= 10) {
+                            npsCounts[score].value++;
                         }
                     });
                     return { id: question.id, title: 'Distribuição de NPS', type: 'bar', data: npsCounts };
