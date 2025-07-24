@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useLayoutEffect, useCallback } from 'react';
 
 // ==================================================================================
 // ||                                                                              ||
@@ -201,6 +201,7 @@ const SyncIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24"
 const CloudCheckIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/><path d="m9 12 2 2 4-4"/></svg> );
 const MessageSquareIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> );
 const EditIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> );
+const RefreshCwIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg> );
 
 
 // --- COMPONENTES DA UI ---
@@ -374,95 +375,98 @@ const MarkdownRenderer = ({ content }) => {
 
 
 const DashboardAnalysis = ({ filteredForms, questionsData }) => {
-    const [isLoading, setIsLoading] = useState(true);
-    const [analysisResult, setAnalysisResult] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [analysisResult, setAnalysisResult] = useState("Clique em 'Analisar Feedbacks' para gerar insights com a IA.");
     const MAX_FEEDBACKS_FOR_ANALYSIS = 50;
 
-    useEffect(() => {
-        const analyzeFeedback = async () => {
-            setIsLoading(true);
-            setAnalysisResult("");
+    const analyzeFeedback = async () => {
+        setIsLoading(true);
+        setAnalysisResult("");
 
-            const textResponses = filteredForms
-                .filter(form => form.status === 'Respondido' && form.responses)
-                .sort((a, b) => new Date(b.dateClosed) - new Date(a.dateClosed)) // Sort by most recent
-                .flatMap(form => form.responses
-                    .map(res => {
-                        const question = questionsData.find(q => q.id === res.questionId);
-                        if (question && (question.type === 'textarea' || question.type === 'text')) {
-                            return res.answer;
-                        }
-                        return null;
-                    })
-                    .filter(Boolean)
-                )
-                .slice(0, MAX_FEEDBACKS_FOR_ANALYSIS); // Limit the number of feedbacks
-            
-            if (textResponses.length === 0) {
-                setAnalysisResult("Nenhum feedback em texto para analisar no período selecionado.");
-                setIsLoading(false);
-                return;
+        const textResponses = filteredForms
+            .filter(form => form.status === 'Respondido' && form.responses)
+            .sort((a, b) => new Date(b.dateClosed) - new Date(a.dateClosed))
+            .flatMap(form => form.responses
+                .map(res => {
+                    const question = questionsData.find(q => q.id === res.questionId);
+                    if (question && (question.type === 'textarea' || question.type === 'text')) {
+                        return res.answer;
+                    }
+                    return null;
+                })
+                .filter(Boolean)
+            )
+            .slice(0, MAX_FEEDBACKS_FOR_ANALYSIS);
+        
+        if (textResponses.length === 0) {
+            setAnalysisResult("Nenhum feedback em texto para analisar no período selecionado.");
+            setIsLoading(false);
+            return;
+        }
+
+        const prompt = `
+            Analise o seguinte conjunto de feedbacks de clientes da empresa de telecomunicações Newnet para o período selecionado. Esta é uma amostra dos ${textResponses.length} feedbacks mais recentes.
+
+            Feedbacks:
+            ---
+            ${textResponses.map(r => `- ${r}`).join('\n')}
+            ---
+
+            Sua tarefa é:
+            1. **Resumo Geral:** Crie um resumo executivo de 2 a 3 frases destacando os principais insights do período.
+            2. **Temas Positivos Comuns:** Identifique e liste até 3 pontos positivos mais mencionados pelos clientes.
+            3. **Pontos de Melhoria:** Identifique e liste até 3 críticas ou sugestões de melhoria mais comuns.
+
+            Formate a sua resposta EXATAMENTE assim, usando markdown:
+            **Resumo Geral:** [Seu resumo aqui]
+            **Pontos Positivos Comuns:**
+            - [Ponto 1]
+            - [Ponto 2]
+            **Pontos de Melhoria:**
+            - [Ponto 1]
+            - [Ponto 2]
+        `;
+
+        try {
+            let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+            const payload = { contents: chatHistory };
+            const apiKey = USER_API_KEY || "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts[0].text) {
+                const text = result.candidates[0].content.parts[0].text;
+                setAnalysisResult(text);
+            } else {
+                setAnalysisResult("Não foi possível analisar o feedback. Verifique sua chave de API e tente novamente.");
             }
-
-            const prompt = `
-                Analise o seguinte conjunto de feedbacks de clientes da empresa de telecomunicações Newnet para o período selecionado. Esta é uma amostra dos ${textResponses.length} feedbacks mais recentes.
-
-                Feedbacks:
-                ---
-                ${textResponses.map(r => `- ${r}`).join('\n')}
-                ---
-
-                Sua tarefa é:
-                1. **Resumo Geral:** Crie um resumo executivo de 2 a 3 frases destacando os principais insights do período.
-                2. **Temas Positivos Comuns:** Identifique e liste até 3 pontos positivos mais mencionados pelos clientes.
-                3. **Pontos de Melhoria:** Identifique e liste até 3 críticas ou sugestões de melhoria mais comuns.
-
-                Formate a sua resposta EXATAMENTE assim, usando markdown:
-                **Resumo Geral:** [Seu resumo aqui]
-                **Pontos Positivos Comuns:**
-                - [Ponto 1]
-                - [Ponto 2]
-                **Pontos de Melhoria:**
-                - [Ponto 1]
-                - [Ponto 2]
-            `;
-
-            try {
-                let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-                const payload = { contents: chatHistory };
-                const apiKey = USER_API_KEY || "";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const result = await response.json();
-                if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts[0].text) {
-                    const text = result.candidates[0].content.parts[0].text;
-                    setAnalysisResult(text);
-                } else {
-                    setAnalysisResult("Não foi possível analisar o feedback. Verifique sua chave de API e tente novamente.");
-                }
-            } catch (error) {
-                console.error("Error calling Gemini API:", error);
-                setAnalysisResult("Ocorreu um erro ao conectar com a IA. Verifique o console.");
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        analyzeFeedback();
-    }, [filteredForms, questionsData]);
+        } catch (error) {
+            console.error("Error calling Gemini API:", error);
+            setAnalysisResult("Ocorreu um erro ao conectar com a IA. Verifique o console.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     return (
         <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
             <div className="flex justify-between items-center mb-2">
                  <h3 className="text-lg font-semibold text-gray-700">✨ Insights da IA</h3>
-                 <span className="text-xs text-gray-400">Análise baseada nos últimos {MAX_FEEDBACKS_FOR_ANALYSIS} feedbacks</span>
+                 <button 
+                    onClick={analyzeFeedback} 
+                    disabled={isLoading}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                 >
+                    <RefreshCwIcon className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                    {isLoading ? 'Analisando...' : 'Analisar Feedbacks'}
+                 </button>
             </div>
             {isLoading ? (
-                <div className="space-y-4 animate-pulse">
+                <div className="space-y-4 animate-pulse p-4">
                     <div className="h-4 bg-gray-200 rounded w-1/3"></div>
                     <div className="h-4 bg-gray-200 rounded w-full"></div>
                     <div className="h-4 bg-gray-200 rounded w-2/3"></div>
@@ -474,9 +478,7 @@ const DashboardAnalysis = ({ filteredForms, questionsData }) => {
     );
 };
 
-const DashboardPage = ({ formsData, questionsData, onNavigate }) => {
-    const [timeFilter, setTimeFilter] = useState('all');
-
+const DashboardPage = ({ formsData, questionsData, onNavigate, timeFilter }) => {
     const filteredForms = useMemo(() => {
         if (timeFilter === 'all') return formsData;
         const now = new Date();
@@ -571,15 +573,6 @@ const DashboardPage = ({ formsData, questionsData, onNavigate }) => {
 
     return (
         <div className="space-y-8">
-            <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-gray-800">Dashboard</h2>
-                <div className="flex items-center space-x-2">
-                    <button onClick={() => setTimeFilter('7d')} className={`px-3 py-1 text-sm rounded-md ${timeFilter === '7d' ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-700'}`}>7 dias</button>
-                    <button onClick={() => setTimeFilter('30d')} className={`px-3 py-1 text-sm rounded-md ${timeFilter === '30d' ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-700'}`}>30 dias</button>
-                    <button onClick={() => setTimeFilter('all')} className={`px-3 py-1 text-sm rounded-md ${timeFilter === 'all' ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-700'}`}>Tudo</button>
-                </div>
-            </div>
-            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard title="Taxa de Resposta" value={`${stats.responseRate}%`} icon={<CheckCircleIcon />} subtext={`${stats.responded} de ${stats.total} formulários`} />
                 <StatCard title="NPS Score" value={stats.nps} icon={<StarIcon />} subtext="De -100 a 100" />
@@ -732,14 +725,6 @@ const FormsListPage = ({ formsData, questionsData, initialFilters, onFiltersChan
     return (
         <>
             <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold text-gray-700">Todos os Formulários</h3>
-                    <button onClick={downloadCSV} className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white font-semibold rounded-lg shadow-md hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 text-sm">
-                        <DownloadIcon className="w-4 h-4" />
-                        Exportar CSV
-                    </button>
-                </div>
-                
                 <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4 items-center">
                     <input 
                         type="text" 
@@ -850,98 +835,104 @@ const AnalyticsPage = ({ formsData, questionsData }) => {
 };
 
 const AnalyticsAnalysis = ({ formsData, questionsData }) => {
-    const [isLoading, setIsLoading] = useState(true);
-    const [analysisResult, setAnalysisResult] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [analysisResult, setAnalysisResult] = useState("Clique em 'Analisar Feedbacks' para gerar insights com a IA.");
     const MAX_FEEDBACKS_FOR_ANALYSIS = 50;
 
-    useEffect(() => {
-        const analyzeFeedback = async () => {
-            setIsLoading(true);
-            setAnalysisResult("");
+    const analyzeFeedback = async () => {
+        setIsLoading(true);
+        setAnalysisResult("");
 
-            const answeredForms = formsData
-                .filter(f => f.status === 'Respondido' && f.responses)
-                .sort((a, b) => new Date(b.dateClosed) - new Date(a.dateClosed));
+        const answeredForms = formsData
+            .filter(f => f.status === 'Respondido' && f.responses)
+            .sort((a, b) => new Date(b.dateClosed) - new Date(a.dateClosed));
 
-            if (answeredForms.length === 0) {
-                setAnalysisResult("Nenhum feedback para analisar.");
-                setIsLoading(false);
-                return;
-            }
+        if (answeredForms.length === 0) {
+            setAnalysisResult("Nenhum feedback para analisar.");
+            setIsLoading(false);
+            return;
+        }
 
-            const feedbackByTechnician = answeredForms.reduce((acc, form) => {
-                const textResponse = form.responses.find(r => {
-                    const q = questionsData.find(q => q.id === r.questionId);
-                    return q && (q.type === 'textarea' || q.type === 'text');
-                });
-                if (textResponse) {
-                    if (!acc[form.technician]) {
-                        acc[form.technician] = [];
-                    }
-                    acc[form.technician].push(textResponse.answer);
+        const feedbackByTechnician = answeredForms.reduce((acc, form) => {
+            const textResponse = form.responses.find(r => {
+                const q = questionsData.find(q => q.id === r.questionId);
+                return q && (q.type === 'textarea' || q.type === 'text');
+            });
+            if (textResponse) {
+                if (!acc[form.technician]) {
+                    acc[form.technician] = [];
                 }
-                return acc;
-            }, {});
-
-            let feedbackText = "";
-            for (const tech in feedbackByTechnician) {
-                const recentFeedbacks = feedbackByTechnician[tech].slice(0, MAX_FEEDBACKS_FOR_ANALYSIS / Object.keys(feedbackByTechnician).length);
-                feedbackText += `\nFeedback para o técnico ${tech}:\n` + recentFeedbacks.map(fb => `- ${fb}`).join('\n');
+                acc[form.technician].push(textResponse.answer);
             }
+            return acc;
+        }, {});
+
+        let feedbackText = "";
+        for (const tech in feedbackByTechnician) {
+            const recentFeedbacks = feedbackByTechnician[tech].slice(0, MAX_FEEDBACKS_FOR_ANALYSIS / Object.keys(feedbackByTechnician).length);
+            feedbackText += `\nFeedback para o técnico ${tech}:\n` + recentFeedbacks.map(fb => `- ${fb}`).join('\n');
+        }
 
 
-            const prompt = `
-                Você é um analista de dados para a Newnet, uma empresa de telecomunicações. Analise o seguinte conjunto de feedbacks de clientes, agrupados por técnico.
+        const prompt = `
+            Você é um analista de dados para a Newnet, uma empresa de telecomunicações. Analise o seguinte conjunto de feedbacks de clientes, agrupados por técnico.
 
-                Feedbacks:
-                ---
-                ${feedbackText}
-                ---
+            Feedbacks:
+            ---
+            ${feedbackText}
+            ---
 
-                Sua tarefa é:
-                1. **Análise Comparativa:** Compare o feedback entre os técnicos. Quem está recebendo os melhores elogios e por quê? Existem reclamações recorrentes para algum técnico específico?
-                2. **Insights Chave:** Identifique 2-3 insights principais que a gerência deveria saber sobre a performance da equipe técnica.
+            Sua tarefa é:
+            1. **Análise Comparativa:** Compare o feedback entre os técnicos. Quem está recebendo os melhores elogios e por quê? Existem reclamações recorrentes para algum técnico específico?
+            2. **Insights Chave:** Identifique 2-3 insights principais que a gerência deveria saber sobre a performance da equipe técnica.
 
-                Formate a sua resposta EXATAMENTE assim, usando markdown:
-                **Análise Comparativa:** [Sua análise aqui, comparando os técnicos]
-                **Insights Chave:**
-                - [Insight 1]
-                - [Insight 2]
-            `;
+            Formate a sua resposta EXATAMENTE assim, usando markdown:
+            **Análise Comparativa:** [Sua análise aqui, comparando os técnicos]
+            **Insights Chave:**
+            - [Insight 1]
+            - [Insight 2]
+        `;
 
-            try {
-                let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-                const payload = { contents: chatHistory };
-                const apiKey = USER_API_KEY || "";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const result = await response.json();
-                if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts[0].text) {
-                    const text = result.candidates[0].content.parts[0].text;
-                    setAnalysisResult(text);
-                } else {
-                    setAnalysisResult("Não foi possível analisar o feedback. Verifique sua chave de API e tente novamente.");
-                }
-            } catch (error) {
-                console.error("Error calling Gemini API:", error);
-                setAnalysisResult("Ocorreu um erro ao conectar com a IA. Verifique o console.");
-            } finally {
-                setIsLoading(false);
+        try {
+            let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+            const payload = { contents: chatHistory };
+            const apiKey = USER_API_KEY || "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts[0].text) {
+                const text = result.candidates[0].content.parts[0].text;
+                setAnalysisResult(text);
+            } else {
+                setAnalysisResult("Não foi possível analisar o feedback. Verifique sua chave de API e tente novamente.");
             }
-        };
-
-        analyzeFeedback();
-    }, [formsData, questionsData]);
+        } catch (error) {
+            console.error("Error calling Gemini API:", error);
+            setAnalysisResult("Ocorreu um erro ao conectar com a IA. Verifique o console.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     return (
         <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 col-span-1 lg:col-span-2">
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">✨ Análise de Performance da Equipe</h3>
+            <div className="flex justify-between items-center mb-2">
+                 <h3 className="text-lg font-semibold text-gray-700">✨ Análise de Performance da Equipe</h3>
+                 <button 
+                    onClick={analyzeFeedback} 
+                    disabled={isLoading}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                 >
+                    <RefreshCwIcon className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                    {isLoading ? 'Analisando...' : 'Analisar Feedbacks'}
+                 </button>
+            </div>
             {isLoading ? (
-                <div className="space-y-4 animate-pulse">
+                <div className="space-y-4 animate-pulse p-4">
                     <div className="h-4 bg-gray-200 rounded w-1/3"></div>
                     <div className="h-4 bg-gray-200 rounded w-full"></div>
                     <div className="h-4 bg-gray-200 rounded w-2/3"></div>
@@ -953,7 +944,7 @@ const AnalyticsAnalysis = ({ formsData, questionsData }) => {
     );
 };
 
-const SettingsPage = ({ initialQuestions }) => {
+const SettingsPage = ({ initialQuestions, onRefresh }) => {
     const [activeTab, setActiveTab] = useState('form'); // 'form' ou 'sms'
 
     return (
@@ -975,18 +966,18 @@ const SettingsPage = ({ initialQuestions }) => {
                 </button>
             </div>
 
-            {activeTab === 'form' && <FormEditorPage initialQuestions={initialQuestions} />}
+            {activeTab === 'form' && <FormEditorPage initialQuestions={initialQuestions} onFormUpdate={onRefresh} />}
             {activeTab === 'sms' && <SmsSettingsPage />}
         </div>
     );
 };
 
-const FormEditorPage = ({ initialQuestions }) => {
+const FormEditorPage = ({ initialQuestions, onFormUpdate }) => {
     const [questions, setQuestions] = useState(initialQuestions || []);
     const [globalSaveStatus, setGlobalSaveStatus] = useState('idle'); // 'idle', 'saving', 'saved', 'error'
     const [draggedIdx, setDraggedIdx] = useState(null);
     const debouncedQuestions = useDebounce(questions, 1500);
-    const initialQuestionsRef = useRef(initialQuestions);
+    const initialQuestionsRef = useRef(JSON.parse(JSON.stringify(initialQuestions)));
     const isFirstRun = useRef(true);
 
     // Efeito para salvar alterações de CRIAÇÃO e ATUALIZAÇÃO (incluindo reordenação)
@@ -1018,13 +1009,23 @@ const FormEditorPage = ({ initialQuestions }) => {
                     });
                     if (!response.ok) throw new Error('Falha ao criar pergunta');
                     const newQuestion = await response.json();
-                    // Atualiza o ID temporário pelo ID permanente do backend
-                    setQuestions(currentQs => currentQs.map(oldQ => oldQ.id === q.id ? { ...newQuestion, text: newQuestion.question_text, type: newQuestion.question_type, options: newQuestion.options } : oldQ));
+                    
+                    setQuestions(currentQs => {
+                        const updated = currentQs.map(oldQ => 
+                            oldQ.id === q.id ? { ...newQuestion, text: newQuestion.question_text, type: newQuestion.question_type, options: newQuestion.options, display_order: newQuestion.display_order } : oldQ
+                        );
+                        initialQuestionsRef.current = updated;
+                        return updated;
+                    });
 
                 } else {
                     // ATUALIZAR (PUT)
                     const initialQuestion = initialMap.get(q.id);
-                    const hasChanged = !initialQuestion || JSON.stringify({ ...initialQuestion, display_order: index }) !== JSON.stringify(q);
+                    const hasChanged = !initialQuestion || 
+                        initialQuestion.text !== q.text ||
+                        initialQuestion.type !== q.type ||
+                        initialQuestion.display_order !== index ||
+                        JSON.stringify(initialQuestion.options) !== JSON.stringify(q.options);
                     
                     if (hasChanged) {
                         const response = await fetch(`${API_ENDPOINT}/questions/${q.id}`, {
@@ -1040,7 +1041,7 @@ const FormEditorPage = ({ initialQuestions }) => {
             try {
                 await Promise.all(promises);
                 setGlobalSaveStatus('saved');
-                initialQuestionsRef.current = questions; // Atualiza o estado de referência
+                initialQuestionsRef.current = questions.map((q, i) => ({...q, display_order: i}));
             } catch (error) {
                 console.error("Erro no autosave:", error);
                 setGlobalSaveStatus('error');
@@ -1067,11 +1068,11 @@ const FormEditorPage = ({ initialQuestions }) => {
     };
 
     const handleRemoveQuestion = async (questionToRemove) => {
-        // Remove da UI imediatamente para uma experiência mais fluida
+        const oldQuestions = questions;
         setQuestions(currentQuestions => currentQuestions.filter(q => q.id !== questionToRemove.id));
 
         if (questionToRemove.id.startsWith('new_')) {
-            return; // Não precisa fazer chamada à API se a questão nem foi salva ainda
+            return; 
         }
 
         setGlobalSaveStatus('saving');
@@ -1084,8 +1085,7 @@ const FormEditorPage = ({ initialQuestions }) => {
         } catch (error) {
             console.error("Erro ao deletar pergunta:", error);
             setGlobalSaveStatus('error');
-            // Opcional: Adicionar a questão de volta à UI e mostrar um erro
-            setQuestions(initialQuestionsRef.current);
+            setQuestions(oldQuestions);
         }
     };
     
@@ -1298,7 +1298,7 @@ const SmsSettingsPage = () => {
 export default function App() {
   const [activePage, setActivePage] = useState('dashboard');
   const [appData, setAppData] = useState({ forms: [], questions: [] });
-  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(true);
   const [error, setError] = useState(null);
   const [pageFilters, setPageFilters] = useState({
       time: 'all',
@@ -1306,41 +1306,49 @@ export default function App() {
       nps: 'all',
       status: 'all'
   });
+  const [timeFilter, setTimeFilter] = useState('all');
+
+  const loadData = useCallback(async () => {
+      setIsRefreshing(true);
+      setError(null);
+      try {
+          const data = API_ENDPOINT ? await fetchRealData(API_ENDPOINT) : await fetchMockData();
+          setAppData(data);
+      } catch (err) {
+          console.error("Falha ao carregar dados:", err);
+          setError(err.message);
+      } finally {
+          setIsRefreshing(false);
+      }
+  }, []);
 
   useEffect(() => {
-    const loadData = async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            const data = API_ENDPOINT ? await fetchRealData(API_ENDPOINT) : await fetchMockData();
-            setAppData(data);
-        } catch (err) {
-            console.error("Falha ao carregar dados:", err);
-            setError(err.message);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    loadData();
-  }, []);
+    loadData(); // Carga na mudança de página e na carga inicial
+    const intervalId = setInterval(loadData, 10000); // Recarrega a cada 10 segundos
+    return () => clearInterval(intervalId); // Limpa o intervalo ao desmontar ou ao re-executar o efeito
+  }, [activePage, loadData]); 
   
   const handleNavigate = (page, newFilters = {}) => {
       setPageFilters(prevFilters => ({ ...prevFilters, ...newFilters }));
       setActivePage(page);
   };
 
+  const pageTitles = {
+      dashboard: "Dashboard",
+      forms: "Todos os Formulários",
+      analytics: "Análises de Performance",
+      settings: "Configurações"
+  };
+
   const renderContent = () => {
-    if (isLoading) {
-      return <div className="flex items-center justify-center h-full"><p className="text-gray-500">Carregando dados...</p></div>;
-    }
-    if (error) {
+    if (error && !appData.forms.length) { // Mostra erro apenas se não houver dados para exibir
         return <div className="flex items-center justify-center h-full"><p className="text-red-500">Erro ao carregar dados: {error}</p></div>;
     }
     switch (activePage) {
-      case 'dashboard': return <DashboardPage formsData={appData.forms} questionsData={appData.questions} onNavigate={handleNavigate} />;
+      case 'dashboard': return <DashboardPage formsData={appData.forms} questionsData={appData.questions} onNavigate={handleNavigate} timeFilter={timeFilter} />;
       case 'forms': return <FormsListPage formsData={appData.forms} questionsData={appData.questions} initialFilters={pageFilters} onFiltersChange={setPageFilters} />;
       case 'analytics': return <AnalyticsPage formsData={appData.forms} questionsData={appData.questions} />;
-      case 'settings': return <SettingsPage initialQuestions={appData.questions} />;
+      case 'settings': return <SettingsPage initialQuestions={appData.questions} onRefresh={loadData} />;
       default: return <DashboardPage formsData={appData.forms} questionsData={appData.questions} onNavigate={handleNavigate} />;
     }
   };
@@ -1370,6 +1378,16 @@ export default function App() {
         `}</style>
       <Sidebar activePage={activePage} setActivePage={setActivePage} />
       <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+            <h2 className={`text-2xl font-bold text-gray-800 transition-opacity duration-300 ${isRefreshing ? 'opacity-50' : 'opacity-100'}`}>{pageTitles[activePage]}</h2>
+            {activePage === 'dashboard' && (
+                <div className="flex items-center space-x-2">
+                    <button onClick={() => setTimeFilter('7d')} className={`px-3 py-1 text-sm rounded-md ${timeFilter === '7d' ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-700'}`}>7 dias</button>
+                    <button onClick={() => setTimeFilter('30d')} className={`px-3 py-1 text-sm rounded-md ${timeFilter === '30d' ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-700'}`}>30 dias</button>
+                    <button onClick={() => setTimeFilter('all')} className={`px-3 py-1 text-sm rounded-md ${timeFilter === 'all' ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-700'}`}>Tudo</button>
+                </div>
+            )}
+        </div>
         {renderContent()}
       </main>
     </div>
