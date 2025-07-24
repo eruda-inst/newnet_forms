@@ -45,6 +45,8 @@ class AttendanceData(BaseModel):
     technician: Optional[str] = None
     serviceType: str = Field(..., alias='service_type')
     status: str
+    dateClosed: Optional[datetime] = Field(None, alias='date_closed')
+
 
     class Config:
         orm_mode = True

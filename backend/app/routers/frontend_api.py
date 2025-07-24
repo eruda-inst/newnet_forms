@@ -100,7 +100,8 @@ def get_answered_survey(
         "client_name": attendance.client_name,
         "technician": attendance.technician,
         "service_type": attendance.service_type,
-        "status": attendance.status
+        "status": attendance.status,
+        "date_closed": attendance.date_closed
     }
 
     # Formata a lista de perguntas e respostas
