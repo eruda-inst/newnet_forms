@@ -1,0 +1,20 @@
+# Dependências
+node_modules
+
+# Pasta de build e cache do Next.js
+.next
+
+# Arquivos de log e debug
+npm-debug.log
+*.log
+
+# Arquivos de ambiente local (MUITO IMPORTANTE)
+.env.local
+.env.*.local
+
+# Arquivos do Git
+.git
+.gitignore
+
+# Outros
+README.md
